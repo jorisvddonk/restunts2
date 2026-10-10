@@ -18,6 +18,65 @@ extern void cdecl file_build_path(const char* dir, const char* name, const char*
 // dseg-resident scratch path (asm file I/O takes near pointers).
 #pragma aux g_path_buf "*"
 extern char g_path_buf[];
+// Main-loop idle flag. Setting it makes the original menu auto-select
+// "Let's Drive" (see run_menu_asm_), so we can fast-forward through the menu
+// while still running all of its initialization.
+#pragma aux idle_expired "*"
+extern uint8_t idle_expired;
+
+// Hook the original memory manager free/release so a bogus (segment 0) free
+// does not abort the game. Original asm implementations (see seg012).
+extern void far* cdecl mmgr_free_asm_(void far* data);
+extern void far* cdecl mmgr_release_asm_(void far* data);
+
+void far* cdecl mmgr_free(void far* data)
+{
+    if ((((unsigned long)data) >> 16) == 0) {
+        _printf("mmgr_free seg0 data=%08lX\n", (unsigned long)data);
+        return data;
+    }
+    return mmgr_free_asm_(data);
+}
+
+void far* cdecl mmgr_release(void far* data)
+{
+    if ((((unsigned long)data) >> 16) == 0) {
+        _printf("mmgr_release seg0 data=%08lX\n", (unsigned long)data);
+        return data;
+    }
+    return mmgr_release_asm_(data);
+}
+
+extern unsigned int cdecl mmgr_get_chunk_size_asm_(void far* data);
+extern unsigned int cdecl mmgr_resize_memory_asm_(void far* data, unsigned int size_);
+extern void far* cdecl mmgr_op_unk_asm_(void far* data);
+
+unsigned int cdecl mmgr_get_chunk_size(void far* data)
+{
+    if ((((unsigned long)data) >> 16) == 0) {
+        _printf("mmgr_get_chunk_size seg0 data=%08lX\n", (unsigned long)data);
+        return 0;
+    }
+    return mmgr_get_chunk_size_asm_(data);
+}
+
+unsigned int cdecl mmgr_resize_memory(void far* data, unsigned int size_)
+{
+    if ((((unsigned long)data) >> 16) == 0) {
+        _printf("mmgr_resize_memory seg0 data=%08lX\n", (unsigned long)data);
+        return 0;
+    }
+    return mmgr_resize_memory_asm_(data, size_);
+}
+
+void far* cdecl mmgr_op_unk(void far* data)
+{
+    if ((((unsigned long)data) >> 16) == 0) {
+        _printf("mmgr_op_unk seg0 data=%08lX\n", (unsigned long)data);
+        return data;
+    }
+    return mmgr_op_unk_asm_(data);
+}
 
 // File-scope data must live in the game's data segment (DS points at dseg
 // at runtime; the asm helpers take near pointers).
@@ -113,17 +172,22 @@ uint16_t cdecl run_intro_looped(void)
     if (!boot_parsed) {
         boot_parse_cmdline();
     }
-    if (boot_track_set) {
-        return 0; // Skip intro, go to menu.
-    }
+    // Always run the original intro. It auto-advances on its own (its input
+    // wait times out), and running it keeps the game fully initialized.
     return run_intro_looped_asm_();
 }
 
 int cdecl run_menu(void)
 {
     uint16_t k;
+    int r;
+
+    if (!boot_parsed) {
+        boot_parse_cmdline();
+    }
     if (boot_track_set) {
-        // Apply the requested track once, then start the race.
+        // Apply the requested track once, then let the original menu
+        // fast-forward itself into "Let's Drive".
         boot_track_set = 0;
         for (k = 0; k < 9; k++) {
             gameconfig.game_trackname[k] = boot_track[k];
@@ -133,7 +197,12 @@ int cdecl run_menu(void)
         }
         file_build_path(boot_empty_str, gameconfig.game_trackname, boot_trkext, g_path_buf);
         file_read_fatal(g_path_buf, td14_elem_map_main);
-        return 0; // Race.
+        // The original menu auto-selects menu item 0 ("Let's Drive") when the
+        // idle flag is set, after doing all of its normal setup.
+        idle_expired = 1;
+        r = run_menu_asm_();
+        idle_expired = 0;
+        return r;
     }
     return run_menu_asm_();
 }
