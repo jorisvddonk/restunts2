@@ -33,6 +33,7 @@
     <div id="menu">
       <h1>restunts2 web</h1>
       <p>Car: <select id="carsel"><option value="">Default</option></select></p>
+      <p><label><input type="checkbox" id="autosave"> Auto-download replay files</label></p>
       <h2>Race a track</h2>
       <ul id="tracklist"><li><small>loading tracks…</small></li></ul>
       <h2>Watch a replay</h2>
@@ -193,7 +194,9 @@
             replHashes.set(name, h);
             // First poll: record the shipped replays without downloading.
             if (!watcherSeeded || prev === h) continue;
-            downloadReplay(name, data);
+            if (document.getElementById("autosave")?.checked) {
+              downloadReplay(name, data);
+            }
             if (/\.rp2$/i.test(name)) {
               const info = parseRp2(data);
               if (info) {
@@ -225,7 +228,7 @@
             document.getElementById("menu").style.display = "none";
             document.getElementById("dos").style.display = "block";
             Dos(document.getElementById("dos"), {
-              url: a.dataset.b + ".jsdos?v=41",
+              url: a.dataset.b + ".jsdos?v=42",
               pathPrefix: "emulators/",
               autoStart: true,
               softKeyboardLayout: touchPad,
@@ -284,6 +287,7 @@
             o.textContent = c;
             sel.appendChild(o);
           });
+          sel.value = cars.includes("PMIN") ? "PMIN" : ""; // default car
           sel.addEventListener("change", renderTracks);
           renderTracks();
 

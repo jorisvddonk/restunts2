@@ -65,18 +65,24 @@ menus and boot straight into content. They are ignored by the pure-original
 Arguments can be combined and are case-insensitive, e.g.
 `restunts.exe /tZCT5 /cJAGU` (race on ZCT5 with the Jaguar) or
 `restunts.exe FUN /cJAGU` (watch replay FUN with a swapped player car). Without
-a track or replay the default track is used.
+a track or replay the default track is used; without `/c` the player car
+defaults to `PMIN` (the fastest car).
 
-The replay of every finished race is written to `lastrep.rpl` automatically.
+The replay of every finished race is saved automatically, twice: `lastrep.rpl`
+(the standard format) and `lastrep.rp2` (the same bytes plus a 16-byte timing
+trailer carrying the total and penalty times). A `.rp2` renamed to `.rpl` still
+plays in the original game.
 
-See [PORTING_NOTES.md](PORTING_NOTES.md) for how these are wired into the port.
+See [PORTING_NOTES.md](PORTING_NOTES.md) for how these are wired into the port
+and [TIMING.md](TIMING.md) for the timing model and the `.rp2` format.
 
 ### Web demo
 
 `web/` builds a js-dos browser demo: one bundle per track, per track x car
 combination and per replay, plus a small launcher page. Generate the bundles
 from a Stunts data directory with `python3 web/make-bundles.py [stunts-dir]` and
-serve them with `python3 web/serve.py`.
+serve them with `python3 web/serve.py`. The launcher has a car selector
+(defaults to `PMIN`) and an opt-in *Auto-download replay files* checkbox.
 
 ## Debugging
 

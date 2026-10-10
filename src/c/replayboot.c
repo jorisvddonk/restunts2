@@ -198,6 +198,12 @@ int cdecl run_menu(void)
             for (k = 0; k < 4; k++) {
                 gameconfig.game_playercarid[k] = boot_car[k];
             }
+        } else {
+            // Default to PMIN (the fastest car most people use).
+            gameconfig.game_playercarid[0] = 'P';
+            gameconfig.game_playercarid[1] = 'M';
+            gameconfig.game_playercarid[2] = 'I';
+            gameconfig.game_playercarid[3] = 'N';
         }
         if (boot_track[0] != 0) {
             for (k = 0; k < 9; k++) {
