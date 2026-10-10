@@ -135,22 +135,48 @@ bogus **segment-0** pointer and aborts the game here. Notes on the fix:
 
 ## CLI / boot features (port-only)
 
-`src/c/replayboot.c` implements a `/tTRACK` argument (e.g. `/tDEFAULT`) that
-boots straight into a race on the named track:
+`src/c/replayboot.c` parses the DOS command line (see the README table):
 
-- `run_intro_looped` runs the **original** intro (it auto-advances); `run_menu`
-  loads the requested track then calls the original menu with `idle_expired`
+- `/tTRACK` — boot straight into a race: `run_intro_looped` returns 0 (skip the
+  intro); `run_menu` loads the track
+  (`file_build_path(TPath, gameconfig.game_trackname, a_trk, g_path_buf)` — all
+  *existing* `dseg` symbols) then calls the original menu with `idle_expired`
   forced, which makes it auto-select "Let's Drive".
-- The track path is built with `file_build_path(TPath, gameconfig.game_trackname,
-  a_trk, g_path_buf)` — all *existing* `dseg` symbols — so no new `dseg` data is
-  added (see the `dseg` section).
-- Wiring: `seg000.def`/`seg000.inc` declare `run_intro_looped`/`run_menu` as
-  `extrn`, and their `ALIAS` entries are removed from `aliases-port.lnk`.
-- The `/t` state lived in `dseg` in an early version; that was the cause of the
-  audio regression. It must stay out of `dseg`.
+- `/cCAR` — set `gameconfig.game_playercarid`; without it the car defaults to
+  `PMIN`.
+- `FILE` — boot into a replay: `run_menu` returns 4 → option menu → the
+  `run_option_menu` override loads the `.rpl` via `file_load_replay` (dir/name
+  in `TPath`/`RPath`) and returns nonzero to enter replay mode.
+- `/nNICK` — write the nickname into `byte_459E0`, the buffer `enter_hiscore`
+  passes to `call_read_line`; `read_line` keeps the buffer's initial text
+  (flags `0x2` = don't clear), so the high-score name field comes up prefilled.
+
+`run_game` is also routed through C to auto-save every finished race
+(`lastrep.rpl` + `lastrep.rp2` — see [RP2_FILE_FORMAT.md](RP2_FILE_FORMAT.md)).
+
+Wiring for each overridden function: declare it `extrn` in the **port** block of
+`segNNN.def` **and** `segNNN.inc`, then remove its `ALIAS` from
+`aliases-port.lnk` (see the aliasing section above). A `push cs / call near`
+becomes a `call far`, offset by deleting filler `nop`s to keep the segment size.
+
+None of this state belongs in `dseg`: an early `/t` build put it there and broke
+audio (see the `dseg` section).
 
 ## Web demo (js-dos)
 
-`web/` builds browser bundles (`make-bundles.py`, one `.jsdos` per track) and
-serves them with COOP/COEP headers (`serve.py`) so `SharedArrayBuffer` works.
-Bust the js-dos IndexedDB bundle cache with the `?v=N` query in `index.html`.
+`web/` builds browser bundles (`make-bundles.py`: one `.jsdos` per track, per
+track x car and per replay, plus `tracks.json` / `cars.json` / `replays.json`)
+and serves them with COOP/COEP headers (`serve.py`) so `SharedArrayBuffer`
+works.
+
+- js-dos caches bundles in IndexedDB **keyed by the full URL**, so a changed
+  bundle or server behaviour is only picked up after bumping the `?v=N`
+  cache-bust in `index.html`; a URL first served before a change stays stale.
+- The launcher has a car selector (defaults to `PMIN`), a high-score *Name*
+  field and an opt-in *Auto-download replay files* checkbox.
+- When a `.jsdos` request carries `?nick=NAME`, `serve.py` rewrites the
+  bundle's `.jsdos/dosbox.conf` on the fly to append `/nNAME` to the `REST2.EXE`
+  line — no per-nickname bundles. The page adds `&nick=` only when the Name box
+  is non-empty.
+- The page watches the DOS filesystem and, when enabled, downloads new/changed
+  replays; it parses the `.rp2` trailer and shows the race time.
