@@ -22,6 +22,10 @@ DEBUG = False
 # Add ported functions here and re-run the export so that the built assembly
 # code will use the C implementation instead.
 PORTED_FUNCS_BY_FILE = {
+    "replayboot.c": {
+        "run_intro_looped",
+        "run_menu",
+    },
     "math.c": {
         "int_sin",
         "int_cos",
@@ -29,12 +33,6 @@ PORTED_FUNCS_BY_FILE = {
         "int_hypot",
         "int_hypot_3d",
         "vec_transform",
-    },
-    "replayboot.c": {
-        "run_intro_looped",
-        "run_menu",
-        "run_option_menu",
-        "frame_callback",
     },
 }
 # Source file by function for quick lookup of whether a function is ported.

@@ -32,6 +32,9 @@
   <body>
     <div id="menu">
       <h1>restunts2 web</h1>
+      <p style="color:#f88"><b>Note:</b> the CLI replay/car/track shortcuts
+         below are NOT wired into this build yet — they won't work. Only
+         plain boot runs. (Kept here for when the CLI args come back.)</p>
       <h2>Replay autoload</h2>
       <ul>
         <li><a href="#" data-b="fun">Watch FUN replay</a>
@@ -181,7 +184,7 @@
             document.getElementById("menu").style.display = "none";
             document.getElementById("dos").style.display = "block";
             Dos(document.getElementById("dos"), {
-              url: a.dataset.b + ".jsdos?v=13",
+              url: a.dataset.b + ".jsdos?v=17",
               pathPrefix: "emulators/",
               autoStart: true,
               softKeyboardLayout: touchPad,

@@ -88,8 +88,7 @@ seg005 segment byte public use16 'STUNTSC'
         init_unknown = init_unknown_asm_
         set_frame_callback = set_frame_callback_asm_
         remove_frame_callback = remove_frame_callback_asm_
-        ; frame_callback is ported to C (see replayboot.c).
-        extrn frame_callback:proc
+        frame_callback = frame_callback_asm_
         replay_unk2 = replay_unk2_asm_
         move_helicopters = move_helicopters_asm_
         file_load_replay = file_load_replay_asm_
