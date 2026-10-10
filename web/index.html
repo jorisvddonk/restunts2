@@ -228,8 +228,8 @@
             e.preventDefault();
             document.getElementById("menu").style.display = "none";
             document.getElementById("dos").style.display = "block";
+            const nick = (document.getElementById("nick")?.value || "").trim();
             Dos(document.getElementById("dos"), {
-              const nick = (document.getElementById("nick")?.value || "").trim();
               url:
                 a.dataset.b +
                 ".jsdos?v=43" +
