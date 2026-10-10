@@ -271,7 +271,9 @@
           a.dataset.b = bundleForTrack(t);
           a.textContent = "Race on " + t;
           const s = document.createElement("small");
-          s.textContent = " REST2.EXE /t" + t + (car ? " /c" + car : "");
+          const nick = (document.getElementById("nick")?.value || "").trim();
+          s.textContent =
+            " REST2.EXE /t" + t + (car ? " /c" + car : "") + (nick ? " /n" + nick : "");
           li.appendChild(a);
           li.appendChild(s);
           ul.appendChild(li);
@@ -294,6 +296,7 @@
           });
           sel.value = cars.includes("PMIN") ? "PMIN" : ""; // default car
           sel.addEventListener("change", renderTracks);
+          document.getElementById("nick").addEventListener("input", renderTracks);
           renderTracks();
 
           const rl = document.getElementById("replaylist");
