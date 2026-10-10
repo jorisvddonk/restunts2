@@ -14,6 +14,8 @@ extern uint16_t cdecl run_intro_looped_asm_(void);
 extern int cdecl run_menu_asm_(void);
 extern int cdecl run_option_menu_asm_(void);
 extern void cdecl run_game_asm_(void);
+// Wrapped below so we can publish the car's map position while a race runs.
+extern void cdecl update_gamestate_asm_(void);
 // Original asm replay writer/loader (seg005.asm) and raw file writer (seg012).
 extern int cdecl file_write_replay_asm_(const char* filename);
 extern int16_t cdecl file_load_replay(const char* dir, const char* name);
@@ -61,6 +63,12 @@ static char boot_track[9];
 static char boot_car[4];
 static char boot_replay_name[9];
 static char boot_timing_txt[96];
+// /pos: publish the car's current map square to POS.TXT so a page can show it.
+static int boot_pos = 0;
+static int boot_pos_have = 0;
+static int boot_pos_x = -1;
+static int boot_pos_y = -1;
+static char boot_pos_txt[12];
 
 // PSP segment via INT 21h/62h (explicit registers, no lib call).
 static unsigned boot_psp_seg(void);
@@ -119,6 +127,12 @@ static void boot_parse_cmdline(void)
                 (tok[2] == 'f' || tok[2] == 'F') &&
                 (tok[3] == 'o' || tok[3] == 'O')) {
                 boot_info = 1; // /info: report the timing after a race/replay
+                continue;
+            }
+            if ((n == 3) && (tok[0] == 'p' || tok[0] == 'P') &&
+                (tok[1] == 'o' || tok[1] == 'O') &&
+                (tok[2] == 's' || tok[2] == 'S')) {
+                boot_pos = 1; // /pos: publish the car's map square to POS.TXT
                 continue;
             }
             if (tok[0] == 'c' || tok[0] == 'C') {
@@ -437,4 +451,55 @@ void cdecl run_game(void)
 
     // Enhanced replay carrying the timing (our port reads it back).
     boot_write_enhanced();
+}
+
+// ---------------------------------------------------------------------------
+// Live car position (/pos)
+// ---------------------------------------------------------------------------
+// While a race runs, write the car's current map square to POS.TXT. The
+// square is the one the game itself computes in detect_penalty (seg001):
+//   col = car_posWorld1.lx >> 16           (0..29)
+//   row = 29 - (car_posWorld1.lz >> 16)    (0..29)
+// i.e. the same (col,row) coordinates the track tiles use. A page polls the
+// file and moves a marker on the track map. Only rewritten when the square
+// changes, so the DOS I/O is a handful of tiny writes per race.
+static char boot_pos_name[] = "POS.TXT";
+
+static void boot_publish_pos(void)
+{
+    int x, y;
+    char* p;
+    unsigned n;
+
+    if (!boot_pos) {
+        return;
+    }
+    x = (int)(uint8_t)(((uint32_t)state.playerstate.car_posWorld1.lx) >> 16);
+    y = 29 - (int)(uint8_t)(((uint32_t)state.playerstate.car_posWorld1.lz) >> 16);
+    if (x < 0 || x > 29 || y < 0 || y > 29) {
+        return; // off the 30x30 grid (e.g. mid-air) — keep the last marker
+    }
+    if (boot_pos_have && x == boot_pos_x && y == boot_pos_y) {
+        return; // square unchanged
+    }
+    boot_pos_have = 1;
+    boot_pos_x = x;
+    boot_pos_y = y;
+
+    p = boot_pos_txt;
+    n = 0;
+    n += boot_udec((unsigned)x, p + n);
+    p[n++] = ' ';
+    n += boot_udec((unsigned)y, p + n);
+    p[n++] = '\n';
+    file_write_fatal_asm_(boot_pos_name, (void far*)boot_pos_txt, (unsigned long)n);
+}
+
+// update_gamestate runs once per simulation frame. Wrapping it (the documented
+// asm->C aliasing path) lets us publish the position; the asm stays
+// byte-faithful and no caller reads the return value.
+void cdecl update_gamestate(void)
+{
+    update_gamestate_asm_();
+    boot_publish_pos();
 }

@@ -67,7 +67,7 @@ seg001 segment byte public use16 'STUNTSC'
         init_carstate_from_simd = init_carstate_from_simd_asm_
         init_game_state = init_game_state_asm_
         restore_gamestate = restore_gamestate_asm_
-        update_gamestate = update_gamestate_asm_
+        extrn update_gamestate:proc
         player_op = player_op_asm_
         detect_penalty = detect_penalty_asm_
         update_car_speed = update_car_speed_asm_
