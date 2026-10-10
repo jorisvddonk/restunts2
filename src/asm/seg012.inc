@@ -625,12 +625,12 @@ seg012 segment byte public use16 'STUNTSC'
         mmgr_find_free = mmgr_find_free_asm_
         mmgr_get_chunk_by_name = mmgr_get_chunk_by_name_asm_
         nopsub_31429 = nopsub_31429_asm_
-        extrn mmgr_free:proc
+        mmgr_free = mmgr_free_asm_
         nopsub_31525 = nopsub_31525_asm_
-        extrn mmgr_release:proc
-        extrn mmgr_get_chunk_size:proc
-        extrn mmgr_resize_memory:proc
-        extrn mmgr_op_unk:proc
+        mmgr_release = mmgr_release_asm_
+        mmgr_get_chunk_size = mmgr_get_chunk_size_asm_
+        mmgr_resize_memory = mmgr_resize_memory_asm_
+        mmgr_op_unk = mmgr_op_unk_asm_
         preRender_default = preRender_default_asm_
         preRender_default_alt = preRender_default_alt_asm_
         skybox_op_helper = skybox_op_helper_asm_

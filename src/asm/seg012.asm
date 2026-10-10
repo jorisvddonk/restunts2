@@ -5901,11 +5901,26 @@ LAB_2ea2_2a68:
     jz      LAB_2ea2_2a84
     sub     si, 0x12
     jmp     LAB_2ea2_2a68
+ifndef RESTUNTS_ORIGINAL
+loc_31498:
+    mov     sp, bp
+    pop     bp
+    retf
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+else
 loc_31498:
     push    word ptr [bp+0x8]
     mov     ax, offset aMemoryManagerB
     push    ax
     call    far ptr fatal_error
+endif
 LAB_2ea2_2a84:
     mov     word ptr [bp+data+2], 0x0
     mov     word ptr [si+0x10], 0x0

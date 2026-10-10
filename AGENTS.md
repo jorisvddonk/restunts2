@@ -1,0 +1,32 @@
+# AGENTS.md
+
+This repo is a disassembly/port of the DOS game **Stunts**. Before touching
+anything under `src/`, read **[PORTING_NOTES.md](./PORTING_NOTES.md)** — it
+documents the segment-size invariant, the asm↔C alias mechanism
+(`segNNN.inc` + `segNNN.def` + `aliases-port.lnk`), rebuild gotchas, calling
+conventions, and the memory-manager crash. Most build/link failures in this
+repo come from ignoring one of those rules.
+
+## Build
+
+```sh
+export WATCOM=$HOME/watcom-2
+export PATH=$WATCOM/armo64:$PATH
+export INCLUDE=$WATCOM/h
+
+make -C src c     # compile C -> build/c/dos16/librestunts.a
+make -C src       # assemble + link -> build/platform/dos16/restunts.exe
+```
+
+- `restunts.exe` = the port. `restunto.exe` = the original asm (reference).
+- `.inc`/`.def` edits are not tracked as dependencies: after changing them,
+  `rm -rf build/asm/port build/c/dos16 && make -C src` (see PORTING_NOTES).
+- Do not enlarge any `segNNN` segment — the build enforces exact sizes and an
+  enlarged segment (or a disabled check) yields a non-booting black screen.
+
+## Conventions
+
+- Keep `restunto.exe` byte-faithful; gate port-only changes with
+  `ifdef`/`ifndef RESTUNTS_ORIGINAL`.
+- No new comments in generated asm unless required; keep changes size-neutral.
+- Web demo lives in `web/` (js-dos); cache-bust with `?v=N` in `index.html`.
