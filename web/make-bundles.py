@@ -65,8 +65,8 @@ cars = sorted(
 )
 
 # One bundle per track (default car) and per track x car combo, each
-# auto-booting straight into a race via /t<TRACK> [/c<CAR>]. This bypasses the
-# in-game menu/track preview (which is awkward in the ported build).
+# auto-booting straight into a race via /t<TRACK> [/c<CAR>] — a convenience;
+# the in-game menu/track selection works too.
 for t in tracks:
     pack(f"web/track-{t.lower()}.jsdos", f"REST2.EXE /t{t}")
     for c in cars:
