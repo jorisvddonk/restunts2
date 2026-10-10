@@ -38,7 +38,9 @@ extern uint8_t idle_expired;
 
 static int boot_parsed = 0;
 static int boot_track_set = 0;
+static int boot_car_set = 0;
 static char boot_track[9];
+static char boot_car[4];
 
 // PSP segment via INT 21h/62h (explicit registers, no lib call).
 static unsigned boot_psp_seg(void);
@@ -58,11 +60,13 @@ static void boot_upper(char* buf, uint16_t n)
     }
 }
 
-// Parse the DOS command line for /tXXXXXXXX (track name, 1-8 chars).
+// Parse the DOS command line for /cXXXX (car id, exactly 4 chars) and
+// /tXXXXXXXX (track name, 1-8 chars).
 static void boot_parse_cmdline(void)
 {
     uint8_t far* tail;
     uint16_t len, i, n, k;
+    char tok[9];
     int ok;
 
     boot_parsed = 1;
@@ -85,23 +89,38 @@ static void boot_parse_cmdline(void)
             n = 0;
             i++;
             while (i <= len && n < 9 && tail[i] != ' ' && tail[i] != '\t' && tail[i] != '\r' && tail[i] != '/') {
-                boot_track[n++] = tail[i++];
+                tok[n++] = tail[i++];
             }
-            if (n >= 2 && (boot_track[0] == 't' || boot_track[0] == 'T')) {
-                ok = 1;
+            if (n < 2) {
+                continue;
+            }
+            ok = 1;
+            for (k = 1; k < n; k++) {
+                if (!((tok[k] >= 'a' && tok[k] <= 'z')
+                    || (tok[k] >= 'A' && tok[k] <= 'Z')
+                    || (tok[k] >= '0' && tok[k] <= '9'))) {
+                    ok = 0;
+                }
+            }
+            if (!ok) {
+                continue;
+            }
+            if (tok[0] == 'c' || tok[0] == 'C') {
+                if (n != 5) {
+                    continue; // car id is exactly 4 chars
+                }
+                for (k = 0; k < 4; k++) {
+                    boot_car[k] = tok[k + 1];
+                }
+                boot_upper(boot_car, 4);
+                boot_car_set = 1;
+            } else if (tok[0] == 't' || tok[0] == 'T') {
                 for (k = 1; k < n; k++) {
-                    boot_track[k - 1] = boot_track[k];
-                    if (!((boot_track[k - 1] >= 'a' && boot_track[k - 1] <= 'z')
-                        || (boot_track[k - 1] >= 'A' && boot_track[k - 1] <= 'Z')
-                        || (boot_track[k - 1] >= '0' && boot_track[k - 1] <= '9'))) {
-                        ok = 0;
-                    }
+                    boot_track[k - 1] = tok[k];
                 }
-                if (ok) {
-                    boot_upper(boot_track, n - 1);
-                    boot_track[n - 1] = 0;
-                    boot_track_set = 1;
-                }
+                boot_upper(boot_track, n - 1);
+                boot_track[n - 1] = 0;
+                boot_track_set = 1;
             }
         } else {
             while (i <= len && tail[i] != ' ' && tail[i] != '\t' && tail[i] != '\r' && tail[i] != '/') {
@@ -129,14 +148,22 @@ int cdecl run_menu(void)
     if (!boot_parsed) {
         boot_parse_cmdline();
     }
-    if (boot_track_set) {
-        // Apply the requested track once, then let the original menu
-        // fast-forward itself into "Let's Drive".
+    if (boot_track_set || boot_car_set) {
+        // Apply the requested car and/or track once, then let the original
+        // menu fast-forward itself into "Let's Drive".
         boot_track_set = 0;
-        for (k = 0; k < 9; k++) {
-            gameconfig.game_trackname[k] = boot_track[k];
-            if (boot_track[k] == 0) {
-                break;
+        if (boot_car_set) {
+            boot_car_set = 0;
+            for (k = 0; k < 4; k++) {
+                gameconfig.game_playercarid[k] = boot_car[k];
+            }
+        }
+        if (boot_track[0] != 0) {
+            for (k = 0; k < 9; k++) {
+                gameconfig.game_trackname[k] = boot_track[k];
+                if (boot_track[k] == 0) {
+                    break;
+                }
             }
         }
         file_build_path(TPath, gameconfig.game_trackname, a_trk, g_path_buf);

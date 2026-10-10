@@ -30,15 +30,9 @@ c:
 
 # name -> DOS command line to auto-boot
 CASES = {
-    "fun": "REST2.EXE FUN",
-    "fun-jagu": "REST2.EXE FUN /cJAGU",
-    "fun-vett": "REST2.EXE FUN /cVETT",
-    "fun-p962": "REST2.EXE FUN /cP962",
-    "default": "REST2.EXE DEFAULT",
-    "race-jagu-zct5": "REST2.EXE /tZCT5 /cJAGU",
-    "race-lm02": "REST2.EXE /cLM02",
     "plain": "REST2.EXE",
 }
+
 
 def pack(path, runline):
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
@@ -56,17 +50,31 @@ os.makedirs("web", exist_ok=True)
 for name, runline in CASES.items():
     pack(f"web/{name}.jsdos", runline)
 
-# One bundle per track file, auto-booting a race on it (bypasses the
-# in-game track preview, which hangs in the ported build). Also emit
-# tracks.json so the page can list them.
 import json
+
+# Tracks (.TRK) and cars (CAR<ID>.RES).
 tracks = sorted(
     os.path.splitext(f)[0].upper()
     for f in os.listdir(STUNTS)
     if f.lower().endswith(".trk")
 )
+cars = sorted(
+    f[3:-4].upper()
+    for f in os.listdir(STUNTS)
+    if f.upper().startswith("CAR") and f.upper().endswith(".RES")
+)
+
+# One bundle per track (default car) and per track x car combo, each
+# auto-booting straight into a race via /t<TRACK> [/c<CAR>]. This bypasses the
+# in-game menu/track preview (which is awkward in the ported build).
 for t in tracks:
     pack(f"web/track-{t.lower()}.jsdos", f"REST2.EXE /t{t}")
+    for c in cars:
+        pack(f"web/track-{t.lower()}-{c.lower()}.jsdos", f"REST2.EXE /t{t} /c{c}")
+
 with open("web/tracks.json", "w") as fh:
     json.dump(tracks, fh)
+with open("web/cars.json", "w") as fh:
+    json.dump(cars, fh)
 print("tracks:", tracks)
+print("cars:", cars)
