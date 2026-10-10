@@ -97,7 +97,7 @@ seg000 segment byte public use16 'STUNTSC'
         highscore_write_b = highscore_write_b_asm_
         run_car_menu = run_car_menu_asm_
         run_opponent_menu = run_opponent_menu_asm_
-        run_option_menu = run_option_menu_asm_
+        extrn run_option_menu:proc
         end_hiscore = end_hiscore_asm_
         security_check = security_check_asm_
         set_default_car = set_default_car_asm_

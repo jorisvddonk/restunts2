@@ -12,9 +12,11 @@
 // Original implementations in seg000.asm (renamed with _asm_ suffix).
 extern uint16_t cdecl run_intro_looped_asm_(void);
 extern int cdecl run_menu_asm_(void);
+extern int cdecl run_option_menu_asm_(void);
 extern void cdecl run_game_asm_(void);
-// Original asm replay writer (seg005.asm); writes the current replay buffer.
+// Original asm replay writer/loader (seg005.asm).
 extern int cdecl file_write_replay_asm_(const char* filename);
+extern int16_t cdecl file_load_replay(const char* dir, const char* name);
 
 // Unported asm helpers, resolved via aliases-port.lnk.
 extern void cdecl file_build_path(const char* dir, const char* name, const char* ext, char* dst);
@@ -25,6 +27,8 @@ extern char g_path_buf[];
 // does; this avoids putting new strings in dseg (which breaks audio).
 #pragma aux TPath "*"
 extern char TPath[];
+#pragma aux RPath "*"
+extern char RPath[];
 #pragma aux a_trk "*"
 extern char a_trk[];
 // Main-loop idle flag. Setting it makes the original menu auto-select
@@ -42,8 +46,10 @@ extern uint8_t idle_expired;
 static int boot_parsed = 0;
 static int boot_track_set = 0;
 static int boot_car_set = 0;
+static int boot_pending = 0;
 static char boot_track[9];
 static char boot_car[4];
+static char boot_replay_name[9];
 
 // PSP segment via INT 21h/62h (explicit registers, no lib call).
 static unsigned boot_psp_seg(void);
@@ -126,8 +132,28 @@ static void boot_parse_cmdline(void)
                 boot_track_set = 1;
             }
         } else {
-            while (i <= len && tail[i] != ' ' && tail[i] != '\t' && tail[i] != '\r' && tail[i] != '/') {
-                i++;
+            // A bare token (not /c, /t) names a replay file (first one wins).
+            if (!boot_pending) {
+                n = 0;
+                while (i <= len && n < 8 && tail[i] != ' ' && tail[i] != '\t' && tail[i] != '\r' && tail[i] != '/') {
+                    boot_replay_name[n++] = tail[i++];
+                }
+                if (n > 4
+                    && boot_replay_name[n - 4] == '.'
+                    && (boot_replay_name[n - 3] == 'r' || boot_replay_name[n - 3] == 'R')
+                    && (boot_replay_name[n - 2] == 'p' || boot_replay_name[n - 2] == 'P')
+                    && (boot_replay_name[n - 1] == 'l' || boot_replay_name[n - 1] == 'L')) {
+                    n -= 4;
+                }
+                boot_upper(boot_replay_name, n);
+                boot_replay_name[n] = 0;
+                if (n != 0) {
+                    boot_pending = 1;
+                }
+            } else {
+                while (i <= len && tail[i] != ' ' && tail[i] != '\t' && tail[i] != '\r' && tail[i] != '/') {
+                    i++;
+                }
             }
         }
     }
@@ -138,8 +164,11 @@ uint16_t cdecl run_intro_looped(void)
     if (!boot_parsed) {
         boot_parse_cmdline();
     }
-    // Always run the original intro. It auto-advances on its own (its input
-    // wait times out), and running it keeps the game fully initialized.
+    // Fast-forward the intro when a CLI boot target was given.
+    if (boot_pending || boot_car_set || boot_track_set) {
+        return 0;
+    }
+    // Otherwise run the original intro (it auto-advances on its own).
     return run_intro_looped_asm_();
 }
 
@@ -150,6 +179,9 @@ int cdecl run_menu(void)
 
     if (!boot_parsed) {
         boot_parse_cmdline();
+    }
+    if (boot_pending) {
+        return 4; // -> option menu, where the replay is loaded
     }
     if (boot_track_set || boot_car_set) {
         // Apply the requested car and/or track once, then let the original
@@ -179,6 +211,39 @@ int cdecl run_menu(void)
         return r;
     }
     return run_menu_asm_();
+}
+
+// Replay viewing. When a replay name is given on the CLI, the main loop routes
+// run_menu()==4 -> _do_option_menu -> run_option_menu(); load the replay here
+// and return nonzero to enter replay mode. file_load_replay fills gameconfig
+// from the .rpl header, so the normal track_load/run_game path plays it back.
+int cdecl run_option_menu(void)
+{
+    uint16_t k;
+
+    if (!boot_parsed) {
+        boot_parse_cmdline();
+    }
+    if (boot_pending) {
+        boot_pending = 0;
+        // dir ("" into TPath) and name (RPath) must be dseg near strings; the
+        // asm loader reads them via DS, and builds the path into g_path_buf.
+        TPath[0] = 0;
+        for (k = 0; boot_replay_name[k] != 0; k++) {
+            RPath[k] = boot_replay_name[k];
+        }
+        RPath[k] = 0;
+        file_load_replay(TPath, RPath);
+        if (boot_car_set) {
+            boot_car_set = 0;
+            for (k = 0; k < 4; k++) {
+                gameconfig.game_playercarid[k] = boot_car[k];
+            }
+        }
+        boot_track_set = 0; // the replay's own track wins
+        return 1;           // enter replay mode
+    }
+    return run_option_menu_asm_();
 }
 
 // Auto-save the just-finished race's replay to "lastrep.rpl" (no dialog), so

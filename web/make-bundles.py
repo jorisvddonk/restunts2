@@ -72,9 +72,21 @@ for t in tracks:
     for c in cars:
         pack(f"web/track-{t.lower()}-{c.lower()}.jsdos", f"REST2.EXE /t{t} /c{c}")
 
+# One bundle per replay (.RPL), auto-playing it (a bare NAME arg).
+replays = sorted(
+    os.path.splitext(f)[0].upper()
+    for f in os.listdir(STUNTS)
+    if f.lower().endswith(".rpl")
+)
+for r in replays:
+    pack(f"web/replay-{r.lower()}.jsdos", f"REST2.EXE {r}")
+
 with open("web/tracks.json", "w") as fh:
     json.dump(tracks, fh)
 with open("web/cars.json", "w") as fh:
     json.dump(cars, fh)
+with open("web/replays.json", "w") as fh:
+    json.dump(replays, fh)
 print("tracks:", tracks)
 print("cars:", cars)
+print("replays:", replays)

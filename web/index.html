@@ -35,6 +35,8 @@
       <p>Car: <select id="carsel"><option value="">Default</option></select></p>
       <h2>Race a track</h2>
       <ul id="tracklist"><li><small>loading tracks…</small></li></ul>
+      <h2>Watch a replay</h2>
+      <ul id="replaylist"><li><small>loading replays…</small></li></ul>
       <ul>
         <li><a href="#" data-b="plain">Menus (no flags)</a>
           <small><code>REST2.EXE</code></small></li>
@@ -169,7 +171,7 @@
             document.getElementById("menu").style.display = "none";
             document.getElementById("dos").style.display = "block";
             Dos(document.getElementById("dos"), {
-              url: a.dataset.b + ".jsdos?v=37",
+              url: a.dataset.b + ".jsdos?v=38",
               pathPrefix: "emulators/",
               autoStart: true,
               softKeyboardLayout: touchPad,
@@ -217,8 +219,9 @@
       Promise.all([
         fetch("tracks.json").then((r) => r.json()),
         fetch("cars.json").then((r) => r.json()),
+        fetch("replays.json").then((r) => r.json()),
       ])
-        .then(([tracks, cars]) => {
+        .then(([tracks, cars, replays]) => {
           TRACKS = tracks;
           const sel = document.getElementById("carsel");
           cars.forEach((c) => {
@@ -229,6 +232,22 @@
           });
           sel.addEventListener("change", renderTracks);
           renderTracks();
+
+          const rl = document.getElementById("replaylist");
+          rl.innerHTML = "";
+          replays.forEach((r) => {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.href = "#";
+            a.dataset.b = "replay-" + r.toLowerCase();
+            a.textContent = "Watch " + r;
+            const s = document.createElement("small");
+            s.textContent = " REST2.EXE " + r;
+            li.appendChild(a);
+            li.appendChild(s);
+            rl.appendChild(li);
+          });
+          attachBoot();
         })
         .catch(() => {
           document.getElementById("tracklist").innerHTML =

@@ -259,8 +259,7 @@ _do_opp_menu:
 _do_option_menu:
     call    far ptr check_input
     call    far ptr show_waiting
-    push    cs
-    call    near ptr run_option_menu
+    call    far ptr run_option_menu
     or      al, al
     jnz     _goto_game1
     jmp     near ptr _show_menu
@@ -1309,7 +1308,6 @@ LAB_1000_0d88:
     sub     si, si
     mov     di, 0x2
     jmp     near ptr LAB_1000_0e83
-    db 0x90
 LAB_1000_0da0:
     call    far ptr mouse_draw_opaque_check
     push    word ptr [bp+var_4]
