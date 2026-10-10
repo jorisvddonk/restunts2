@@ -42,6 +42,9 @@ extern uint8_t idle_expired;
 // Current simulation rate (10 or 20 fps); stored in the enhanced trailer.
 #pragma aux framespersec "*"
 extern uint16_t framespersec;
+// High-score name field, prefilled from /nNICKNAME (see enter_hiscore).
+#pragma aux byte_459E0 "*"
+extern uint8_t byte_459E0[];
 
 // NOTE: do NOT force this data into the game's `dseg` segment. Growing `dseg`
 // shifts the game's memory layout and silently breaks audio. Like math.c, let
@@ -81,7 +84,7 @@ static void boot_parse_cmdline(void)
 {
     uint8_t far* tail;
     uint16_t len, i, n, k;
-    char tok[9];
+    char tok[18];
     int ok;
 
     boot_parsed = 1;
@@ -103,39 +106,53 @@ static void boot_parse_cmdline(void)
         if (tail[i] == '/') {
             n = 0;
             i++;
-            while (i <= len && n < 9 && tail[i] != ' ' && tail[i] != '\t' && tail[i] != '\r' && tail[i] != '/') {
+            while (i <= len && n < 17 && tail[i] != ' ' && tail[i] != '\t' && tail[i] != '\r' && tail[i] != '/') {
                 tok[n++] = tail[i++];
             }
             if (n < 2) {
-                continue;
-            }
-            ok = 1;
-            for (k = 1; k < n; k++) {
-                if (!((tok[k] >= 'a' && tok[k] <= 'z')
-                    || (tok[k] >= 'A' && tok[k] <= 'Z')
-                    || (tok[k] >= '0' && tok[k] <= '9'))) {
-                    ok = 0;
-                }
-            }
-            if (!ok) {
                 continue;
             }
             if (tok[0] == 'c' || tok[0] == 'C') {
                 if (n != 5) {
                     continue; // car id is exactly 4 chars
                 }
-                for (k = 0; k < 4; k++) {
-                    boot_car[k] = tok[k + 1];
+                ok = 1;
+                for (k = 1; k < n; k++) {
+                    boot_car[k - 1] = tok[k];
+                    if (!((boot_car[k - 1] >= 'a' && boot_car[k - 1] <= 'z')
+                        || (boot_car[k - 1] >= 'A' && boot_car[k - 1] <= 'Z')
+                        || (boot_car[k - 1] >= '0' && boot_car[k - 1] <= '9'))) {
+                        ok = 0;
+                    }
                 }
-                boot_upper(boot_car, 4);
-                boot_car_set = 1;
+                if (ok) {
+                    boot_upper(boot_car, 4);
+                    boot_car_set = 1;
+                }
             } else if (tok[0] == 't' || tok[0] == 'T') {
+                if (n > 9) {
+                    continue; // track name is at most 8 chars
+                }
+                ok = 1;
                 for (k = 1; k < n; k++) {
                     boot_track[k - 1] = tok[k];
+                    if (!((boot_track[k - 1] >= 'a' && boot_track[k - 1] <= 'z')
+                        || (boot_track[k - 1] >= 'A' && boot_track[k - 1] <= 'Z')
+                        || (boot_track[k - 1] >= '0' && boot_track[k - 1] <= '9'))) {
+                        ok = 0;
+                    }
                 }
-                boot_upper(boot_track, n - 1);
-                boot_track[n - 1] = 0;
-                boot_track_set = 1;
+                if (ok) {
+                    boot_upper(boot_track, n - 1);
+                    boot_track[n - 1] = 0;
+                    boot_track_set = 1;
+                }
+            } else if (tok[0] == 'n' || tok[0] == 'N') {
+                // /nNICKNAME: prefill the high-score name field (case kept).
+                for (k = 1; k < n; k++) {
+                    byte_459E0[k - 1] = (uint8_t)tok[k];
+                }
+                byte_459E0[n - 1] = 0;
             }
         } else {
             // A bare token (not /c, /t) names a replay file (first one wins).

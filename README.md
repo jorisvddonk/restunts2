@@ -60,13 +60,13 @@ menus and boot straight into content. They are ignored by the pure-original
 | ---       | ---                                                                                  |
 | `/tTRACK` | Boot into a race on the named track (1-8 chars), e.g. `/tZCT5`. The track file `TRACK.TRK` must exist. |
 | `/cCAR`   | Select the player car (exactly 4 chars), e.g. `/cJAGU`; corresponds to `CARCAR.RES`.  |
+| `/nNICK`  | Prefill the high-score name field with `NICK` (up to 16 chars).                       |
 | `FILE`    | Boot into a replay, e.g. `FUN` or `FUN.RPL` (the first bare argument).                |
 
-Arguments can be combined and are case-insensitive, e.g.
-`restunts.exe /tZCT5 /cJAGU` (race on ZCT5 with the Jaguar) or
-`restunts.exe FUN /cJAGU` (watch replay FUN with a swapped player car). Without
-a track or replay the default track is used; without `/c` the player car
-defaults to `PMIN` (the fastest car).
+Arguments can be combined and are case-insensitive (the `/n` nickname's case
+is kept), e.g. `restunts.exe /tZCT5 /cJAGU /nMyName` (race on ZCT5 with the
+Jaguar, high-score name prefilled). Without a track or replay the default track
+is used; without `/c` the player car defaults to `PMIN` (the fastest car).
 
 The replay of every finished race is saved automatically, twice: `lastrep.rpl`
 (the standard format) and `lastrep.rp2` (the same bytes plus a 16-byte timing
