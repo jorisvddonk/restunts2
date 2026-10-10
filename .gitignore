@@ -2,3 +2,6 @@ ghidra/*.gpr
 ghidra/*.lock*
 ghidra/*.rep/
 build
+web/*.jsdos
+web/js-dos.js
+web/emulators/

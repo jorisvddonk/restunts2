@@ -17,7 +17,7 @@ ARFLAGS  $(ARFLAGS)
 DEBUG    $(DEBUG)
 endef
 
-SRCS := math.c
+SRCS := math.c replayboot.c
 OUT_DIR := ../../build/c/$(PLATFORM)
 OBJS := $(addprefix $(OUT_DIR)/, $(SRCS:.c=.o))
 LIB := $(OUT_DIR)/librestunts.a

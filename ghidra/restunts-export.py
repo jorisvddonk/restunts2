@@ -30,6 +30,12 @@ PORTED_FUNCS_BY_FILE = {
         "int_hypot_3d",
         "vec_transform",
     },
+    "replayboot.c": {
+        "run_intro_looped",
+        "run_menu",
+        "run_option_menu",
+        "frame_callback",
+    },
 }
 # Source file by function for quick lookup of whether a function is ported.
 PORTED_FUNCS = dict(

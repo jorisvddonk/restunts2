@@ -259,8 +259,7 @@ _do_opp_menu:
 _do_option_menu:
     call    far ptr check_input
     call    far ptr show_waiting
-    push    cs
-    call    near ptr run_option_menu
+    call    far ptr run_option_menu
     or      al, al
     jnz     _goto_game1
     jmp     near ptr _show_menu
@@ -397,8 +396,7 @@ _do_intro:
     add     sp, 0x6
 LAB_1000_042d:
     mov     byte ptr [idle_expired], 0x0
-    push    cs
-    call    near ptr run_intro_looped
+    call    far ptr run_intro_looped
     mov     di, ax
     cmp     di, 0x1b
     jnz     _show_menu
@@ -419,8 +417,7 @@ _show_menu:
     call    far ptr file_load_audiores
     add     sp, 0x6
 LAB_1000_0467:
-    push    cs
-    call    near ptr run_menu
+    call    far ptr run_menu
     cbw
     cmp     ax, 0xffff
     jnz     LAB_1000_0474
@@ -644,7 +641,6 @@ LAB_1000_068e:
     pop     bp
     retf
 run_intro_looped_asm_ endp
-    db 0x90
     db 0x90
 
 ; int __cdecl16far run_intro_title(void)
@@ -1313,7 +1309,6 @@ LAB_1000_0d88:
     sub     si, si
     mov     di, 0x2
     jmp     near ptr LAB_1000_0e83
-    db 0x90
 LAB_1000_0da0:
     call    far ptr mouse_draw_opaque_check
     push    word ptr [bp+var_4]
@@ -2010,7 +2005,6 @@ LAB_1000_1470:
     cmp     ax, 0x4d00
     jz      LAB_1000_14a4
     jmp     near ptr LAB_1000_13b4
-    db 0x90
 LAB_1000_1490:
     cmp     byte ptr [bp+var_16], 0x0
     jz      LAB_1000_149c

@@ -162,12 +162,43 @@ extern void far* cdecl file_read_fatal(const char* filename, void far* dst);
 extern void far* cdecl file_load_resfile(const char* filename);
 extern char far* cdecl locate_shape_alt(const char far* data, const char* name);
 extern void cdecl restore_gamestate(uint16_t frame);
+extern int16_t cdecl file_write_replay(const char* filename);
+extern int cdecl compare_ds_ss(void);
+extern void cdecl sub_18D06(int16_t a, int16_t b);
+extern void cdecl replay_unk2(int16_t param);
+extern void cdecl audio_carstate(void);
 extern void cdecl player_op(uint8_t);
 extern void cdecl opponent_op(void);
 extern void cdecl move_helicopters(void);
 extern void cdecl move_explode(void);
 
-// Stunts data
+// Stunts data (raw dseg bytes used by ported timer/UI code)
+#pragma aux byte_442E4 "*"
+extern uint8_t byte_442E4;
+#pragma aux askfull "*"
+extern uint8_t askfull;
+#pragma aux is_in_replay "*"
+extern uint8_t is_in_replay;
+#pragma aux game_replay_mode "*"
+extern uint8_t game_replay_mode;
+#pragma aux byte_44A8A "*"
+extern uint8_t byte_44A8A;
+#pragma aux byte_4552F "*"
+extern uint8_t byte_4552F;
+#pragma aux rspeed "*"
+extern uint8_t rspeed;
+#pragma aux word_443F4 "*"
+extern uint16_t word_443F4;
+#pragma aux word_4499C "*"
+extern uint16_t word_4499C;
+#pragma aux word_449E4 "*"
+extern uint16_t word_449E4;
+#pragma aux word_44D1E "*"
+extern uint16_t word_44D1E;
+#pragma aux word_46468 "*"
+extern uint16_t word_46468;
+#pragma aux elapsed_time2 "*"
+extern uint16_t elapsed_time2;
 #pragma aux g_language "*"
 extern uint16_t g_language;
 #pragma aux g_car_res_name "*"

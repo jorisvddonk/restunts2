@@ -989,7 +989,7 @@ set_frame_callback_asm_ proc far
     mov     word ptr [word_46468], 0x0
     mov     ax, offset frame_callback
 ; <REPLACE>
-    mov     dx, seg seg005
+    mov     dx, seg frame_callback
 ; </REPLACE>
 ;    mov     dx, 0x21b7                         ; seg005
     push    dx

@@ -85,10 +85,8 @@ seg000 segment byte public use16 'STUNTSC'
     else
         ; Alias unported functions to the original asm implementation.
         extrn stuntsmain:proc
-        run_intro_looped = run_intro_looped_asm_
         run_intro_title = run_intro_title_asm_
         load_intro_resources = load_intro_resources_asm_
-        run_menu = run_menu_asm_
         run_tracks_menu = run_tracks_menu_asm_
         highscore_write_a = highscore_write_a_asm_
         highscore_text_unk = highscore_text_unk_asm_
@@ -97,9 +95,12 @@ seg000 segment byte public use16 'STUNTSC'
         highscore_write_b = highscore_write_b_asm_
         run_car_menu = run_car_menu_asm_
         run_opponent_menu = run_opponent_menu_asm_
-        run_option_menu = run_option_menu_asm_
         end_hiscore = end_hiscore_asm_
         security_check = security_check_asm_
         set_default_car = set_default_car_asm_
+        ; Functions ported to C are external (see replayboot.c).
+        extrn run_intro_looped:proc
+        extrn run_menu:proc
+        extrn run_option_menu:proc
     endif
 seg000 ends
