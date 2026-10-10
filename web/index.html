@@ -92,10 +92,11 @@
           ["{enter} {esc}"],
         ],
       ];
-      // ---- Replay autosave (JS-side, like stunts_championship) ----
-      // Poll the emulator's DOS filesystem for new .rpl files and download
-      // them automatically. No game modification, so nothing can crash.
-      const seenReplays = new Set();
+      // ---- Replay autosave (JS-side) ----
+      // The game auto-saves each finished race to lastrep.rpl. Poll the
+      // emulator's DOS filesystem and download any .rpl that is new or whose
+      // contents changed.
+      const replHashes = new Map();
       let watcherTimer = null;
       let watcherSeeded = false;
       function findRpl(node, out, visited) {
@@ -110,6 +111,23 @@
         }
         return out;
       }
+      function hashBytes(a) {
+        let h = 0;
+        for (let i = 0; i < a.length; i++) h = (h * 31 + a[i]) >>> 0;
+        return a.length + ":" + h;
+      }
+      function downloadReplay(name, data) {
+        const blob = new Blob([data], { type: "application/octet-stream" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = name.split("/").pop();
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        console.log("autosaved replay:", name, data.length, "bytes");
+      }
       async function checkReplays() {
         if (!dosCI) return;
         try {
@@ -118,42 +136,29 @@
             new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 5000)),
           ]);
           const rpls = findRpl(tree, [], new Set());
-          // First poll: just record what is already there (game data replays),
-          // so we only auto-save replays produced during play.
-          if (!watcherSeeded) {
-            rpls.forEach((n) => seenReplays.add(n));
-            watcherSeeded = true;
-            return;
-          }
           for (const name of rpls) {
-            if (seenReplays.has(name)) continue;
-            seenReplays.add(name);
+            let data;
             try {
-              const data = await dosCI.fsReadFile(name);
-              const blob = new Blob([data], { type: "application/octet-stream" });
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement("a");
-              link.href = url;
-              link.download = name.split("/").pop();
-              document.body.appendChild(link);
-              link.click();
-              link.remove();
-              URL.revokeObjectURL(url);
-              console.log("autosaved replay:", name, data.length, "bytes");
+              data = await dosCI.fsReadFile(name);
             } catch (err) {
-              seenReplays.delete(name);
-              console.warn("replay read failed:", name, err);
+              continue;
             }
+            const h = hashBytes(data);
+            const prev = replHashes.get(name);
+            replHashes.set(name, h);
+            // First poll: record the shipped replays without downloading.
+            if (!watcherSeeded || prev === h) continue;
+            downloadReplay(name, data);
           }
+          watcherSeeded = true;
         } catch (err) {
           /* transient */
         }
       }
       function startReplayWatcher() {
         if (watcherTimer) return;
-        // First pass once DOS has settled, then poll.
-        setTimeout(checkReplays, 10000);
-        watcherTimer = setInterval(checkReplays, 5000);
+        setTimeout(checkReplays, 8000);
+        watcherTimer = setInterval(checkReplays, 4000);
       }
       function attachBoot() {
         document.querySelectorAll("#menu a[data-b]").forEach((a) => {
@@ -164,13 +169,14 @@
             document.getElementById("menu").style.display = "none";
             document.getElementById("dos").style.display = "block";
             Dos(document.getElementById("dos"), {
-              url: a.dataset.b + ".jsdos?v=36",
+              url: a.dataset.b + ".jsdos?v=37",
               pathPrefix: "emulators/",
               autoStart: true,
               softKeyboardLayout: touchPad,
               onEvent: (event, ci2) => {
                 if (event === "ci-ready") {
                   dosCI = ci2;
+                  startReplayWatcher();
                   if (matchMedia("(pointer: coarse)").matches) {
                     document.getElementById("pad").classList.add("on");
                     bindPad();

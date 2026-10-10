@@ -39,7 +39,7 @@ seg005 segment byte public use16 'STUNTSC'
         loop_game = loop_game_asm_
     else
         ; Alias unported functions to the original asm implementation.
-        run_game = run_game_asm_
+        extrn run_game:proc
         handle_ingame_kb_shortcuts = handle_ingame_kb_shortcuts_asm_
         init_unknown = init_unknown_asm_
         set_frame_callback = set_frame_callback_asm_

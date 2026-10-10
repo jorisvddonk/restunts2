@@ -12,6 +12,9 @@
 // Original implementations in seg000.asm (renamed with _asm_ suffix).
 extern uint16_t cdecl run_intro_looped_asm_(void);
 extern int cdecl run_menu_asm_(void);
+extern void cdecl run_game_asm_(void);
+// Original asm replay writer (seg005.asm); writes the current replay buffer.
+extern int cdecl file_write_replay_asm_(const char* filename);
 
 // Unported asm helpers, resolved via aliases-port.lnk.
 extern void cdecl file_build_path(const char* dir, const char* name, const char* ext, char* dst);
@@ -176,4 +179,26 @@ int cdecl run_menu(void)
         return r;
     }
     return run_menu_asm_();
+}
+
+// Auto-save the just-finished race's replay to "lastrep.rpl" (no dialog), so
+// the web page can pick it up. The replay buffer (td13_rpl_header) is a
+// persistent allocation, so it is still valid once run_game() returns.
+static const char boot_repname[] = "lastrep.rpl";
+
+void cdecl run_game(void)
+{
+    uint16_t k;
+
+    run_game_asm_();
+
+    if (gameconfig.game_recordedframes == 0) {
+        return; // nothing recorded (e.g. a replay-only session)
+    }
+    // Build the name in the dseg scratch buffer: the asm file I/O wants a
+    // near pointer, and we must not add new data to dseg (that breaks audio).
+    for (k = 0; k < sizeof(boot_repname); k++) {
+        g_path_buf[k] = boot_repname[k];
+    }
+    file_write_replay_asm_(g_path_buf);
 }
