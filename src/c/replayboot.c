@@ -56,9 +56,11 @@ static int boot_parsed = 0;
 static int boot_track_set = 0;
 static int boot_car_set = 0;
 static int boot_pending = 0;
+static int boot_info = 0;
 static char boot_track[9];
 static char boot_car[4];
 static char boot_replay_name[9];
+static char boot_timing_txt[96];
 
 // PSP segment via INT 21h/62h (explicit registers, no lib call).
 static unsigned boot_psp_seg(void);
@@ -110,6 +112,13 @@ static void boot_parse_cmdline(void)
                 tok[n++] = tail[i++];
             }
             if (n < 2) {
+                continue;
+            }
+            if ((n == 5) && (tok[0] == 'i' || tok[0] == 'I') &&
+                (tok[1] == 'n' || tok[1] == 'N') &&
+                (tok[2] == 'f' || tok[2] == 'F') &&
+                (tok[3] == 'o' || tok[3] == 'O')) {
+                boot_info = 1; // /info: report the timing after a race/replay
                 continue;
             }
             if (tok[0] == 'c' || tok[0] == 'C') {
@@ -350,11 +359,72 @@ static void boot_write_enhanced(void)
     mmgr_free_asm_(tmp);
 }
 
+// Minimal unsigned decimal writer (no CRT sprintf here).
+static uint16_t boot_udec(unsigned v, char* dst)
+{
+    char tmp[6];
+    uint16_t n = 0, i;
+
+    if (v == 0) {
+        dst[0] = '0';
+        return 1;
+    }
+    while (v > 0 && n < 6) {
+        tmp[n++] = (char)('0' + (v % 10));
+        v /= 10;
+    }
+    for (i = 0; i < n; i++) {
+        dst[i] = tmp[n - 1 - i];
+    }
+    return n;
+}
+
+// Verification output (/info): write the recomputed race timing to TIMING.TXT
+// and echo it, so a submission can be checked by re-running the replay. The
+// text buffer lives in our own data segment (passed as a far pointer); only
+// the filename uses a dseg scratch buffer.
+static void boot_report_timing(void)
+{
+    unsigned total = (unsigned)(uint16_t)state.game_total_finish;
+    unsigned pen = (unsigned)(uint16_t)state.game_penalty;
+    unsigned fps = (unsigned)framespersec;
+    unsigned rec = (unsigned)gameconfig.game_recordedframes;
+    uint16_t k;
+    uint16_t n = 0;
+    char* p = boot_timing_txt;
+    static const char name[] = "timing.txt";
+
+    p[n++] = 't'; p[n++] = 'o'; p[n++] = 't'; p[n++] = 'a'; p[n++] = 'l'; p[n++] = '=';
+    n += boot_udec(total, p + n);
+    p[n++] = '\n';
+    p[n++] = 'p'; p[n++] = 'e'; p[n++] = 'n'; p[n++] = 'a'; p[n++] = 'l'; p[n++] = 't'; p[n++] = 'y'; p[n++] = '=';
+    n += boot_udec(pen, p + n);
+    p[n++] = '\n';
+    p[n++] = 'f'; p[n++] = 'p'; p[n++] = 's'; p[n++] = '=';
+    n += boot_udec(fps, p + n);
+    p[n++] = '\n';
+    p[n++] = 'r'; p[n++] = 'e'; p[n++] = 'c'; p[n++] = 'o'; p[n++] = 'r'; p[n++] = 'd'; p[n++] = 'e'; p[n++] = 'd'; p[n++] = '=';
+    n += boot_udec(rec, p + n);
+    p[n++] = '\n';
+
+    for (k = 0; k < 11; k++) {
+        g_path_buf[k] = name[k];
+    }
+    file_write_fatal_asm_(g_path_buf, (void far*)boot_timing_txt, (unsigned long)n);
+    _printf("TIMING total=%u penalty=%u fps=%u recorded=%u\n", total, pen, fps, rec);
+}
+
 void cdecl run_game(void)
 {
     uint16_t k;
 
     run_game_asm_();
+
+    if (boot_info) {
+        // Verification run: report only, don't overwrite the autosave.
+        boot_report_timing();
+        return;
+    }
 
     if (gameconfig.game_recordedframes == 0) {
         return; // nothing recorded (e.g. a replay-only session)

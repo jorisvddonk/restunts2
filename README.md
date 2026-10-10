@@ -61,6 +61,7 @@ menus and boot straight into content. They are ignored by the pure-original
 | `/tTRACK` | Boot into a race on the named track (1-8 chars), e.g. `/tZCT5`. The track file `TRACK.TRK` must exist. |
 | `/cCAR`   | Select the player car (exactly 4 chars), e.g. `/cJAGU`; corresponds to `CARCAR.RES`.  |
 | `/nNICK`  | Prefill the high-score name field with `NICK` (up to 16 chars).                       |
+| `/info`   | Verification mode: re-simulate the race/replay, then write `TIMING.TXT` (`total=…`, `penalty=…`, `fps=…`, `recorded=…` frame counts) and print it — to check a submission's timing against the game's own recomputation. |
 | `FILE`    | Boot into a replay, e.g. `FUN` or `FUN.RPL` (the first bare argument).                |
 
 Arguments can be combined and are case-insensitive (the `/n` nickname's case
