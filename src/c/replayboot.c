@@ -223,11 +223,11 @@ int cdecl run_menu(void)
             gameconfig.game_playercarid[3] = 'N';
         }
         if (boot_track[0] != 0) {
+            // Copy the full 9-byte field (do NOT stop at the NUL): otherwise
+            // stale trailing bytes from the previous track name linger and end
+            // up in the replay header (e.g. "SHORT" + "T" from "DEFAULT").
             for (k = 0; k < 9; k++) {
                 gameconfig.game_trackname[k] = boot_track[k];
-                if (boot_track[k] == 0) {
-                    break;
-                }
             }
         }
         file_build_path(TPath, gameconfig.game_trackname, a_trk, g_path_buf);
