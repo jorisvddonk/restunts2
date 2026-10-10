@@ -82,7 +82,9 @@ and [TIMING.md](TIMING.md) for the timing model and the `.rp2` format.
 combination and per replay, plus a small launcher page. Generate the bundles
 from a Stunts data directory with `python3 web/make-bundles.py [stunts-dir]` and
 serve them with `python3 web/serve.py`. The launcher has a car selector
-(defaults to `PMIN`) and an opt-in *Auto-download replay files* checkbox.
+(defaults to `PMIN`), an opt-in *Auto-download replay files* checkbox, and a
+high-score *Name* field (sent as `/n` when non-empty; `serve.py` rewrites the
+bundle's `dosbox.conf` accordingly).
 
 ## Debugging
 
