@@ -18,23 +18,27 @@ extern void cdecl file_build_path(const char* dir, const char* name, const char*
 // dseg-resident scratch path (asm file I/O takes near pointers).
 #pragma aux g_path_buf "*"
 extern char g_path_buf[];
+// Existing dseg symbols used to build the track path exactly like the game
+// does; this avoids putting new strings in dseg (which breaks audio).
+#pragma aux TPath "*"
+extern char TPath[];
+#pragma aux a_trk "*"
+extern char a_trk[];
 // Main-loop idle flag. Setting it makes the original menu auto-select
 // "Let's Drive" (see run_menu_asm_), so we can fast-forward through the menu
 // while still running all of its initialization.
 #pragma aux idle_expired "*"
 extern uint8_t idle_expired;
 
-// File-scope data must live in the game's data segment (DS points at dseg
-// at runtime; the asm helpers take near pointers).
-#pragma data_seg( dseg, "STUNTSD" )
-#pragma bss_seg( dseg, "STUNTSD" )
+// NOTE: do NOT force this data into the game's `dseg` segment. Growing `dseg`
+// shifts the game's memory layout and silently breaks audio. Like math.c, let
+// the compiler place it in its own data segment; that segment is part of the
+// same DGROUP as dseg, so the asm helpers (which access DS-relative near
+// pointers) still read these strings correctly at runtime.
 
 static int boot_parsed = 0;
 static int boot_track_set = 0;
 static char boot_track[9];
-// dseg-resident ".trk" (initializers don't survive CRT startup zeroing).
-static char boot_trkext[5];
-static char boot_empty_str[1];
 
 // PSP segment via INT 21h/62h (explicit registers, no lib call).
 static unsigned boot_psp_seg(void);
@@ -62,12 +66,6 @@ static void boot_parse_cmdline(void)
     int ok;
 
     boot_parsed = 1;
-
-    boot_trkext[0] = '.';
-    boot_trkext[1] = 't';
-    boot_trkext[2] = 'r';
-    boot_trkext[3] = 'k';
-    boot_trkext[4] = 0;
 
     tail = MK_FP(boot_psp_seg(), 0x80);
     len = tail[0];
@@ -118,21 +116,22 @@ uint16_t cdecl run_intro_looped(void)
     if (!boot_parsed) {
         boot_parse_cmdline();
     }
-    if (boot_track_set) {
-        return 0; // Skip intro.
-    }
+    // Always run the original intro. It auto-advances on its own (its input
+    // wait times out), and running it keeps the game fully initialized.
     return run_intro_looped_asm_();
 }
 
 int cdecl run_menu(void)
 {
     uint16_t k;
+    int r;
 
     if (!boot_parsed) {
         boot_parse_cmdline();
     }
     if (boot_track_set) {
-        // Apply the requested track once, then start the race.
+        // Apply the requested track once, then let the original menu
+        // fast-forward itself into "Let's Drive".
         boot_track_set = 0;
         for (k = 0; k < 9; k++) {
             gameconfig.game_trackname[k] = boot_track[k];
@@ -140,9 +139,14 @@ int cdecl run_menu(void)
                 break;
             }
         }
-        file_build_path(boot_empty_str, gameconfig.game_trackname, boot_trkext, g_path_buf);
+        file_build_path(TPath, gameconfig.game_trackname, a_trk, g_path_buf);
         file_read_fatal(g_path_buf, td14_elem_map_main);
-        return 0;
+        // The original menu auto-selects menu item 0 ("Let's Drive") when the
+        // idle flag is set, after doing all of its normal setup.
+        idle_expired = 1;
+        r = run_menu_asm_();
+        idle_expired = 0;
+        return r;
     }
     return run_menu_asm_();
 }

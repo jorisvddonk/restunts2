@@ -92,9 +92,26 @@ original branch alone.
   word); as a 32-bit value it is `(segment << 16) | offset`. So `p >> 16` is
   the segment.
 - `externs.h` may declare asm globals with `#pragma aux sym "*"` (keep the
-  symbol name) and `extern`; dseg-resident data must be tagged with
-  `#pragma data_seg/bss_seg(dseg, "STUNTSD")`.
+  symbol name) and `extern`.
 - Functions resolved via `aliases-port.lnk` are the *unported* asm helpers.
+
+## Do NOT grow `dseg` — it silently kills audio
+
+The game is extremely sensitive to the size/layout of the `dseg` segment.
+Adding even a handful of bytes to `dseg` **shifts the memory layout and
+silently kills sound**: the game still boots and plays, there is no error,
+just no audio. This cost a long debugging session — treat `dseg` as sacred.
+
+Rules:
+
+- Never declare new C data with `#pragma data_seg/bss_seg(dseg, "STUNTSD")`.
+  Let it land in the compiler's own data segment (`_DATA`), which is also part
+  of DGROUP (this is what `math.c` does). `dseg` must stay exactly `55d0`.
+- To hand strings/paths to asm helpers that take **near** pointers, reuse
+  existing `dseg` symbols (`TPath`, `a_trk`, `g_path_buf`, …) exactly like the
+  original code does, instead of introducing new buffers.
+- After building, verify: `grep '^dseg ' build/platform/dos16/restunts.map`
+  must show size `000055d0`.
 
 ## The memory-manager "BLOCK NOT FOUND" crash
 
@@ -108,8 +125,9 @@ bogus **segment-0** pointer and aborts the game here. Notes on the fix:
 
 - Growing `seg012` to add instrument/logging breaks the size invariant and the
   game will not boot.
-- Routing the five functions through C wrappers fixes the crash but **kills
-  sound** (the audio path is disturbed by the extra call layer).
+- Routing the five functions through C wrappers fixes the crash, but it also
+  killed sound — because those wrappers' data was placed in `dseg` (see the
+  `dseg` section above), not because of the extra call layer.
 - The working fix is a **size-neutral patch of `loc_31498` itself**, port-only,
   that returns cleanly (`mov sp,bp / pop bp / retf` + `nop` padding to the
   original 12 bytes) instead of fataling. All six callers share a
@@ -123,8 +141,13 @@ boots straight into a race on the named track:
 - `run_intro_looped` runs the **original** intro (it auto-advances); `run_menu`
   loads the requested track then calls the original menu with `idle_expired`
   forced, which makes it auto-select "Let's Drive".
+- The track path is built with `file_build_path(TPath, gameconfig.game_trackname,
+  a_trk, g_path_buf)` — all *existing* `dseg` symbols — so no new `dseg` data is
+  added (see the `dseg` section).
 - Wiring: `seg000.def`/`seg000.inc` declare `run_intro_looped`/`run_menu` as
   `extrn`, and their `ALIAS` entries are removed from `aliases-port.lnk`.
+- The `/t` state lived in `dseg` in an early version; that was the cause of the
+  audio regression. It must stay out of `dseg`.
 
 ## Web demo (js-dos)
 
