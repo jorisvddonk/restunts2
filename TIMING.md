@@ -109,6 +109,42 @@ simulation rate as the recording, and because it carries the track/car, a
 replay can be booted directly (see the `FILE` CLI argument in
 [README.md](README.md) and the implementation in `src/c/replayboot.c`).
 
+## Enhanced replays (`.RP2`)
+
+Every finished race is auto-saved twice (see `run_game` in
+`src/c/replayboot.c`):
+
+- `lastrep.rpl` — the standard replay, byte-for-byte the original format, so it
+  loads in any build including the retail game.
+- `lastrep.rp2` — the **same bytes** followed by a 16-byte timing trailer, so it
+  is still a valid `.RPL`. Rename it to `.RPL` and the original game plays it:
+  the original reads the whole file into its ~27 KB track buffer (`0x6bf3`,
+  `seg000.asm:112`), which has ~20 KB of slack after the replay, and simply
+  ignores the trailing bytes.
+
+The trailer is little-endian:
+
+| Offset | Size | Field                                              |
+| ---    | ---  | ---                                                |
+| 0      | 4    | magic `"RP2\0"`                                    |
+| 4      | 1    | version (currently 1)                              |
+| 5      | 1    | fps (`framespersec`, 10 or 20)                     |
+| 6      | 2    | total finish frames (`game_total_finish`)          |
+| 8      | 2    | penalty frames (`game_penalty`)                    |
+| 10     | 2    | recorded frames (`gameconfig.game_recordedframes`) |
+| 12     | 2    | checksum = sum of bytes 0..11 (u16)                |
+| 14     | 2    | reserved (0)                                       |
+
+The clean driving time is `total - penalty`; both are formatted as `M:SS.hh`
+with the game's `format_frame_as_string` (centiseconds = `(100/fps) * remainder`).
+
+The replay bytes + trailer are assembled in a private `mmgr` allocation before
+writing — **never** appended into the live track buffer, whose trailing regions
+(e.g. `td16_rpl_buffer`) are still needed at that point. Similarly the filename
+goes into the scratch `g_path_buf`, not `TPath` (the track-path prefix the
+high-score/next-track load relies on). The web page (`web/index.html`) parses
+this trailer and shows the time.
+
 ## Key fields (see `src/c/externs.h`)
 
 | Field                              | Meaning                                         |

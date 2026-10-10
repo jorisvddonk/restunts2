@@ -14,9 +14,12 @@ extern uint16_t cdecl run_intro_looped_asm_(void);
 extern int cdecl run_menu_asm_(void);
 extern int cdecl run_option_menu_asm_(void);
 extern void cdecl run_game_asm_(void);
-// Original asm replay writer/loader (seg005.asm).
+// Original asm replay writer/loader (seg005.asm) and raw file writer (seg012).
 extern int cdecl file_write_replay_asm_(const char* filename);
 extern int16_t cdecl file_load_replay(const char* dir, const char* name);
+extern void cdecl file_write_fatal_asm_(const char* filename, void far* src, unsigned long len);
+// Memory manager (seg012): mmgr_alloc_resbytes is declared in externs.h.
+extern void far* cdecl mmgr_free_asm_(void far* data);
 
 // Unported asm helpers, resolved via aliases-port.lnk.
 extern void cdecl file_build_path(const char* dir, const char* name, const char* ext, char* dst);
@@ -36,6 +39,9 @@ extern char a_trk[];
 // while still running all of its initialization.
 #pragma aux idle_expired "*"
 extern uint8_t idle_expired;
+// Current simulation rate (10 or 20 fps); stored in the enhanced trailer.
+#pragma aux framespersec "*"
+extern uint16_t framespersec;
 
 // NOTE: do NOT force this data into the game's `dseg` segment. Growing `dseg`
 // shifts the game's memory layout and silently breaks audio. Like math.c, let
@@ -251,6 +257,76 @@ int cdecl run_option_menu(void)
 // persistent allocation, so it is still valid once run_game() returns.
 static const char boot_repname[] = "lastrep.rpl";
 
+// Enhanced replay "lastrep.rp2": the standard .RPL bytes plus a 16-byte timing
+// trailer. The original game reads the whole file into its ~27KB track buffer
+// (which has ample slack after the replay), so it loads a .RP2 renamed to .RPL
+// and simply ignores the trailer. Trailer layout (little-endian):
+//   0  magic  "RP2\0"
+//   4  version (1)
+//   5  fps (1)                     -- framespersec (10/20)
+//   6  total finish frames (u16)   -- game_total_finish (frame + penalty + base)
+//   8  penalty frames (u16)        -- game_penalty
+//   10 recorded frames (u16)       -- game_recordedframes
+//   12 checksum (u16)              -- sum of bytes 0..11
+//   14 reserved
+static const char boot_rep2[] = "lastrep.rp2";
+
+static void boot_write_enhanced(void)
+{
+    uint8_t far* buf = (uint8_t far*)td13_rpl_header;
+    uint8_t far* tmp;
+    uint32_t std_len = (uint32_t)gameconfig.game_recordedframes + 0x724UL;
+    uint16_t total = (uint16_t)state.game_total_finish;
+    uint16_t pen = (uint16_t)state.game_penalty;
+    uint16_t rec = gameconfig.game_recordedframes;
+    uint8_t trailer[16];
+    uint16_t k;
+    uint16_t sum;
+    uint32_t i;
+
+    trailer[0] = 'R';
+    trailer[1] = 'P';
+    trailer[2] = '2';
+    trailer[3] = 0;
+    trailer[4] = 1;
+    trailer[5] = (uint8_t)framespersec;
+    trailer[6] = (uint8_t)(total & 0xff);
+    trailer[7] = (uint8_t)(total >> 8);
+    trailer[8] = (uint8_t)(pen & 0xff);
+    trailer[9] = (uint8_t)(pen >> 8);
+    trailer[10] = (uint8_t)(rec & 0xff);
+    trailer[11] = (uint8_t)(rec >> 8);
+    sum = 0;
+    for (k = 0; k < 12; k++) {
+        sum += trailer[k];
+    }
+    trailer[12] = (uint8_t)(sum & 0xff);
+    trailer[13] = (uint8_t)(sum >> 8);
+    trailer[14] = 0;
+    trailer[15] = 0;
+
+    // Build replay + trailer in a private allocation. Appending into the live
+    // replay buffer would clobber the following track regions the game still
+    // uses (the file is read/written contiguously from td13_rpl_header).
+    tmp = mmgr_alloc_resbytes(a_trk, (int32_t)(std_len + 16UL));
+    if (tmp == 0) {
+        return;
+    }
+    for (i = 0; i < std_len; i++) {
+        tmp[i] = buf[i];
+    }
+    for (k = 0; k < 16; k++) {
+        tmp[std_len + k] = trailer[k];
+    }
+    // Use g_path_buf (a scratch path the game rebuilds), NOT TPath: TPath is
+    // the track path prefix the high-score/next-track load still relies on.
+    for (k = 0; k < sizeof(boot_rep2); k++) {
+        g_path_buf[k] = boot_rep2[k];
+    }
+    file_write_fatal_asm_(g_path_buf, (void far*)tmp, std_len + 16UL);
+    mmgr_free_asm_(tmp);
+}
+
 void cdecl run_game(void)
 {
     uint16_t k;
@@ -260,10 +336,12 @@ void cdecl run_game(void)
     if (gameconfig.game_recordedframes == 0) {
         return; // nothing recorded (e.g. a replay-only session)
     }
-    // Build the name in the dseg scratch buffer: the asm file I/O wants a
-    // near pointer, and we must not add new data to dseg (that breaks audio).
+    // Plain replay (byte-for-byte the original format; loads in any build).
     for (k = 0; k < sizeof(boot_repname); k++) {
         g_path_buf[k] = boot_repname[k];
     }
     file_write_replay_asm_(g_path_buf);
+
+    // Enhanced replay carrying the timing (our port reads it back).
+    boot_write_enhanced();
 }
