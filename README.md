@@ -50,6 +50,34 @@ The fully ported code can also be built and tested for other platforms:
 
 These targets do not produce a playable game, only unit tests to aid the reversing process.
 
+## Command line options
+
+The ported executable (`restunts.exe`) accepts extra arguments to skip the
+menus and boot straight into content. They are ignored by the pure-original
+`restunto.exe`.
+
+| Argument  | Description                                                                          |
+| ---       | ---                                                                                  |
+| `/tTRACK` | Boot into a race on the named track (1-8 chars), e.g. `/tZCT5`. The track file `TRACK.TRK` must exist. |
+| `/cCAR`   | Select the player car (exactly 4 chars), e.g. `/cJAGU`; corresponds to `CARCAR.RES`.  |
+| `FILE`    | Boot into a replay, e.g. `FUN` or `FUN.RPL` (the first bare argument).                |
+
+Arguments can be combined and are case-insensitive, e.g.
+`restunts.exe /tZCT5 /cJAGU` (race on ZCT5 with the Jaguar) or
+`restunts.exe FUN /cJAGU` (watch replay FUN with a swapped player car). Without
+a track or replay the default track is used.
+
+The replay of every finished race is written to `lastrep.rpl` automatically.
+
+See [PORTING_NOTES.md](PORTING_NOTES.md) for how these are wired into the port.
+
+### Web demo
+
+`web/` builds a js-dos browser demo: one bundle per track, per track x car
+combination and per replay, plus a small launcher page. Generate the bundles
+from a Stunts data directory with `python3 web/make-bundles.py [stunts-dir]` and
+serve them with `python3 web/serve.py`.
+
 ## Debugging
 
 The Watcom Debugger `wd` can be used to interactively debug the game in a DOS environment.
