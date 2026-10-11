@@ -47,6 +47,10 @@ extern uint16_t framespersec;
 // High-score name field, prefilled from /nNICKNAME (see enter_hiscore).
 #pragma aux byte_459E0 "*"
 extern uint8_t byte_459E0[];
+// Initial track heading (set from the start tile at track load); the car faces
+// this until it first moves.
+#pragma aux track_angle "*"
+extern uint16_t track_angle;
 
 // NOTE: do NOT force this data into the game's `dseg` segment. Growing `dseg`
 // shifts the game's memory layout and silently breaks audio. Like math.c, let
@@ -488,6 +492,19 @@ static int boot_dir_octant(int dx, int dy)
     return dx > 0 ? (dy > 0 ? 1 : 7) : (dy > 0 ? 3 : 5);
 }
 
+// The car faces `track_angle` until it first moves. Map that heading to the
+// same screen octant POS.TXT uses (0=E..7=NE): track_angle 0=N, 0x100=E,
+// 0x200=S, 0x300=W (calibrated against ZCT5, whose 0xb5 start drives west).
+static int boot_start_dir(void)
+{
+    switch (track_angle & 0x300) {
+        case 0x000: return 6; // N
+        case 0x100: return 0; // E
+        case 0x200: return 2; // S
+        default:    return 4; // W (0x300)
+    }
+}
+
 static void boot_publish_pos(void)
 {
     int x, y, dir, dx, dy;
@@ -514,6 +531,9 @@ static void boot_publish_pos(void)
         if (dir < 0) {
             dir = boot_pos_dir; // cell changed but no step (shouldn't happen)
         }
+    }
+    if (dir < 0) {
+        dir = boot_start_dir(); // before the first move, face the start heading
     }
     boot_pos_have = 1;
     boot_pos_x = x;
