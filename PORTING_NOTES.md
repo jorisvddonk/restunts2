@@ -154,8 +154,8 @@ bogus **segment-0** pointer and aborts the game here. Notes on the fix:
   (`col row wx wy vx vz`, 0-29) while a race runs. `update_gamestate` is wrapped
   in C (the asm→C aliasing path): the wrapper calls `update_gamestate_asm_()`
   then writes `POS.TXT` (raw DOS `INT 21h`, no memory manager, so it is safe
-  mid-race) only when the cell changes. The asm stays byte-faithful and no
-  caller reads its return value. The cell is the game's own `detect_penalty`
+  mid-race) at most every `BOOT_POS_INTERVAL` frames (the first write is
+  immediate). The asm stays byte-faithful and no caller reads its return value. The cell is the game's own `detect_penalty`
   square (`col = lx>>16`, `row = 29 - (lz>>16)`) — the same coordinates the
   track tiles use. `wx`/`wy` are continuous screen coords (256 per cell; `wy`
   uses `30 - z` so `wy>>8 == row`), for a smooth marker. `vx`/`vz` are the

@@ -78,6 +78,7 @@ static int32_t boot_pos_vz = 0;
 static int32_t boot_pos_lastlx = 0;
 static int32_t boot_pos_lastlz = 0;
 static int boot_pos_velinit = 0;
+static uint16_t boot_pos_frames = 0;
 static char boot_pos_txt[40];
 
 // PSP segment via INT 21h/62h (explicit registers, no lib call).
@@ -489,6 +490,10 @@ static void boot_start_vel(int32_t* vx, int32_t* vz)
     }
 }
 
+// How often to rewrite POS.TXT (in simulation frames). Larger = fewer writes;
+// the host polls POS.TXT on its own interval regardless.
+#define BOOT_POS_INTERVAL 6
+
 static void boot_publish_pos(void)
 {
     int32_t lx, lz, vx, vz, wx, wy;
@@ -511,13 +516,17 @@ static void boot_publish_pos(void)
     boot_pos_lastlz = lz;
     boot_pos_velinit = 1;
 
+    // Throttle: rewrite at most every BOOT_POS_INTERVAL frames (the first
+    // write happens immediately).
+    if (boot_pos_have && ++boot_pos_frames < BOOT_POS_INTERVAL) {
+        return;
+    }
+    boot_pos_frames = 0;
+
     x = (int)(uint8_t)(((uint32_t)lx) >> 16);
     y = 29 - (int)(uint8_t)(((uint32_t)lz) >> 16);
     if (x < 0 || x > 29 || y < 0 || y > 29) {
         return; // off the 30x30 grid (e.g. mid-air) — keep the last marker
-    }
-    if (boot_pos_have && x == boot_pos_x && y == boot_pos_y) {
-        return; // square unchanged
     }
     boot_pos_have = 1;
     boot_pos_x = x;
