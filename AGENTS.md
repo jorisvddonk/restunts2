@@ -30,3 +30,8 @@ make -C src       # assemble + link -> build/platform/dos16/restunts.exe
   `ifdef`/`ifndef RESTUNTS_ORIGINAL`.
 - No new comments in generated asm unless required; keep changes size-neutral.
 - Web demo lives in `web/` (js-dos); cache-bust with `?v=N` in `index.html`.
+
+## Git
+
+- **Never** run `git add -A` or `git add .`. Stage explicit paths only.
+- Commit/push only when explicitly asked.

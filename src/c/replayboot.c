@@ -78,7 +78,7 @@ static int32_t boot_pos_vz = 0;
 static int32_t boot_pos_lastlx = 0;
 static int32_t boot_pos_lastlz = 0;
 static int boot_pos_velinit = 0;
-static char boot_pos_txt[28];
+static char boot_pos_txt[40];
 
 // PSP segment via INT 21h/62h (explicit registers, no lib call).
 static unsigned boot_psp_seg(void);
@@ -491,7 +491,7 @@ static void boot_start_vel(int32_t* vx, int32_t* vz)
 
 static void boot_publish_pos(void)
 {
-    int32_t lx, lz, vx, vz;
+    int32_t lx, lz, vx, vz, wx, wy;
     int x, y;
     char* p;
     unsigned n;
@@ -523,6 +523,13 @@ static void boot_publish_pos(void)
     boot_pos_x = x;
     boot_pos_y = y;
 
+    // Continuous screen coordinates with 8 fractional bits: wx is map-x*256,
+    // wy is map-y*256 in the tiles' screen space (y down). wy uses (30 - z) so
+    // that wy>>8 == the map row y (the viewer draws file row R at screen 29-R,
+    // and the car sits in [row, row+1)).
+    wx = lx >> 8;
+    wy = (30 << 8) - (lz >> 8);
+
     // Publish the velocity (scaled) as the direction; while stationary, the
     // start heading. The host turns this into an exact angle.
     vx = boot_pos_vx >> 6;
@@ -536,6 +543,12 @@ static void boot_publish_pos(void)
     n += boot_udec((unsigned)x, p + n);
     p[n++] = ' ';
     n += boot_udec((unsigned)y, p + n);
+    p[n++] = ' ';
+    if (wx < 0) { p[n++] = '-'; wx = -wx; }
+    n += boot_udec((unsigned)wx, p + n);
+    p[n++] = ' ';
+    if (wy < 0) { p[n++] = '-'; wy = -wy; }
+    n += boot_udec((unsigned)wy, p + n);
     p[n++] = ' ';
     if (vx < 0) { p[n++] = '-'; vx = -vx; }
     n += boot_udec((unsigned)vx, p + n);

@@ -150,17 +150,19 @@ bogus **segment-0** pointer and aborts the game here. Notes on the fix:
 - `/nNICK` — write the nickname into `byte_459E0`, the buffer `enter_hiscore`
   passes to `call_read_line`; `read_line` keeps the buffer's initial text
   (flags `0x2` = don't clear), so the high-score name field comes up prefilled.
-- `/pos` — publish the car's current map cell to `POS.TXT` (`col row vx vz`,
-  0-29) while a race runs. `update_gamestate` is wrapped in C (the asm→C
-  aliasing path): the wrapper calls `update_gamestate_asm_()` then writes
-  `POS.TXT` (raw DOS `INT 21h`, no memory manager, so it is safe mid-race) only
-  when the cell changes. The asm stays byte-faithful and no caller reads its
-  return value. The cell is the game's own `detect_penalty` square
-  (`col = lx>>16`, `row = 29 - (lz>>16)`) — the same coordinates the track
-  tiles use. `vx`/`vz` are the smoothed per-frame world velocity (an EMA of the
-  position delta), so the host derives an exact heading via `atan2(-vz, vx)`
-  (finer than any fixed set of sectors); before the car first moves they carry
-  the start heading `track_angle` (0=N, 0x100=E, 0x200=S, 0x300=W).
+- `/pos` — publish the car's current map cell to `POS.TXT`
+  (`col row wx wy vx vz`, 0-29) while a race runs. `update_gamestate` is wrapped
+  in C (the asm→C aliasing path): the wrapper calls `update_gamestate_asm_()`
+  then writes `POS.TXT` (raw DOS `INT 21h`, no memory manager, so it is safe
+  mid-race) only when the cell changes. The asm stays byte-faithful and no
+  caller reads its return value. The cell is the game's own `detect_penalty`
+  square (`col = lx>>16`, `row = 29 - (lz>>16)`) — the same coordinates the
+  track tiles use. `wx`/`wy` are continuous screen coords (256 per cell; `wy`
+  uses `30 - z` so `wy>>8 == row`), for a smooth marker. `vx`/`vz` are the
+  smoothed per-frame world velocity (an EMA of the position delta), so the host
+  derives an exact heading via `atan2(-vz, vx)` (finer than any fixed set of
+  sectors); before the car first moves they carry the start heading
+  `track_angle` (0=N, 0x100=E, 0x200=S, 0x300=W).
 
 `run_game` is also routed through C to auto-save every finished race
 (`lastrep.rpl` + `lastrep.rp2` — see [RP2_FILE_FORMAT.md](RP2_FILE_FORMAT.md)).
