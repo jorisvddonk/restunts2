@@ -68,7 +68,8 @@ static int boot_pos = 0;
 static int boot_pos_have = 0;
 static int boot_pos_x = -1;
 static int boot_pos_y = -1;
-static char boot_pos_txt[12];
+static int boot_pos_dir = -1;
+static char boot_pos_txt[20];
 
 // PSP segment via INT 21h/62h (explicit registers, no lib call).
 static unsigned boot_psp_seg(void);
@@ -465,9 +466,31 @@ void cdecl run_game(void)
 // changes, so the DOS I/O is a handful of tiny writes per race.
 static char boot_pos_name[] = "POS.TXT";
 
+// Direction of travel as a screen-space octant (0=E,1=SE,2=S,3=SW,4=W,5=NW,
+// 6=N,7=NE), from a (dx,dy) step in map-cell coordinates; -1 if no movement.
+static int boot_dir_octant(int dx, int dy)
+{
+    int ax = dx < 0 ? -dx : dx;
+    int ay = dy < 0 ? -dy : dy;
+
+    if (ax == 0 && ay == 0) {
+        return -1;
+    }
+    if (ax >= ay) {
+        if (ay * 2 < ax) {
+            return dx > 0 ? 0 : 4; // E / W
+        }
+        return dx > 0 ? (dy > 0 ? 1 : 7) : (dy > 0 ? 3 : 5); // diagonals
+    }
+    if (ax * 2 < ay) {
+        return dy > 0 ? 2 : 6; // S / N
+    }
+    return dx > 0 ? (dy > 0 ? 1 : 7) : (dy > 0 ? 3 : 5);
+}
+
 static void boot_publish_pos(void)
 {
-    int x, y;
+    int x, y, dir, dx, dy;
     char* p;
     unsigned n;
 
@@ -482,15 +505,33 @@ static void boot_publish_pos(void)
     if (boot_pos_have && x == boot_pos_x && y == boot_pos_y) {
         return; // square unchanged
     }
+
+    dir = boot_pos_dir;
+    if (boot_pos_have) {
+        dx = x - boot_pos_x;
+        dy = y - boot_pos_y;
+        dir = boot_dir_octant(dx, dy);
+        if (dir < 0) {
+            dir = boot_pos_dir; // cell changed but no step (shouldn't happen)
+        }
+    }
     boot_pos_have = 1;
     boot_pos_x = x;
     boot_pos_y = y;
+    boot_pos_dir = dir;
 
     p = boot_pos_txt;
     n = 0;
     n += boot_udec((unsigned)x, p + n);
     p[n++] = ' ';
     n += boot_udec((unsigned)y, p + n);
+    p[n++] = ' ';
+    if (dir < 0) {
+        p[n++] = '-';
+        p[n++] = '1';
+    } else {
+        n += boot_udec((unsigned)dir, p + n);
+    }
     p[n++] = '\n';
     file_write_fatal_asm_(boot_pos_name, (void far*)boot_pos_txt, (unsigned long)n);
 }

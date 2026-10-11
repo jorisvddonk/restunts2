@@ -62,7 +62,7 @@ menus and boot straight into content. They are ignored by the pure-original
 | `/cCAR`   | Select the player car (exactly 4 chars), e.g. `/cJAGU`; corresponds to `CARCAR.RES`.  |
 | `/nNICK`  | Prefill the high-score name field with `NICK` (up to 16 chars).                       |
 | `/info`   | Verification mode: re-simulate the race/replay, then write `TIMING.TXT` (`total=…`, `penalty=…`, `fps=…`, `recorded=…` frame counts) and print it — to check a submission's timing against the game's own recomputation. |
-| `/pos`    | Live position: while a race runs, rewrite `POS.TXT` (`col row`, 0-29) whenever the car enters a new map cell, so a host page can plot it on the track map. |
+| `/pos`    | Live position: while a race runs, rewrite `POS.TXT` (`col row dir`, 0-29, and `dir` an octant 0=E,1=SE,…,7=NE or `-1` unknown) whenever the car enters a new map cell, so a host page can plot it on the track map. |
 | `FILE`    | Boot into a replay, e.g. `FUN` or `FUN.RPL` (the first bare argument).                |
 
 Arguments can be combined and are case-insensitive (the `/n` nickname's case
