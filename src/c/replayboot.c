@@ -72,8 +72,13 @@ static int boot_pos = 0;
 static int boot_pos_have = 0;
 static int boot_pos_x = -1;
 static int boot_pos_y = -1;
-static int boot_pos_dir = -1;
-static char boot_pos_txt[20];
+// Smoothed per-frame world velocity (fixed-point), for a precise direction.
+static int32_t boot_pos_vx = 0;
+static int32_t boot_pos_vz = 0;
+static int32_t boot_pos_lastlx = 0;
+static int32_t boot_pos_lastlz = 0;
+static int boot_pos_velinit = 0;
+static char boot_pos_txt[28];
 
 // PSP segment via INT 21h/62h (explicit registers, no lib call).
 static unsigned boot_psp_seg(void);
@@ -470,75 +475,61 @@ void cdecl run_game(void)
 // changes, so the DOS I/O is a handful of tiny writes per race.
 static char boot_pos_name[] = "POS.TXT";
 
-// Direction of travel as a screen-space octant (0=E,1=SE,2=S,3=SW,4=W,5=NW,
-// 6=N,7=NE), from a (dx,dy) step in map-cell coordinates; -1 if no movement.
-static int boot_dir_octant(int dx, int dy)
-{
-    int ax = dx < 0 ? -dx : dx;
-    int ay = dy < 0 ? -dy : dy;
-
-    if (ax == 0 && ay == 0) {
-        return -1;
-    }
-    if (ax >= ay) {
-        if (ay * 2 < ax) {
-            return dx > 0 ? 0 : 4; // E / W
-        }
-        return dx > 0 ? (dy > 0 ? 1 : 7) : (dy > 0 ? 3 : 5); // diagonals
-    }
-    if (ax * 2 < ay) {
-        return dy > 0 ? 2 : 6; // S / N
-    }
-    return dx > 0 ? (dy > 0 ? 1 : 7) : (dy > 0 ? 3 : 5);
-}
-
-// The car faces `track_angle` until it first moves. Map that heading to the
-// same screen octant POS.TXT uses (0=E..7=NE): track_angle 0=N, 0x100=E,
-// 0x200=S, 0x300=W (calibrated against ZCT5, whose 0xb5 start drives west).
-static int boot_start_dir(void)
+// The car faces `track_angle` until it first moves. Publish that heading as a
+// world-space velocity unit vector so the host can angle the marker the same
+// way: track_angle 0=N, 0x100=E, 0x200=S, 0x300=W (calibrated against ZCT5,
+// whose 0xb5 start drives west). World +x is map-east; +z is map-south.
+static void boot_start_vel(int32_t* vx, int32_t* vz)
 {
     switch (track_angle & 0x300) {
-        case 0x000: return 6; // N
-        case 0x100: return 0; // E
-        case 0x200: return 2; // S
-        default:    return 4; // W (0x300)
+        case 0x000: *vx = 0;    *vz = 256;  break; // N
+        case 0x100: *vx = 256;  *vz = 0;    break; // E
+        case 0x200: *vx = 0;    *vz = -256; break; // S
+        default:    *vx = -256; *vz = 0;    break; // W (0x300)
     }
 }
 
 static void boot_publish_pos(void)
 {
-    int x, y, dir, dx, dy;
+    int32_t lx, lz, vx, vz;
+    int x, y;
     char* p;
     unsigned n;
 
     if (!boot_pos) {
         return;
     }
-    x = (int)(uint8_t)(((uint32_t)state.playerstate.car_posWorld1.lx) >> 16);
-    y = 29 - (int)(uint8_t)(((uint32_t)state.playerstate.car_posWorld1.lz) >> 16);
+    lx = state.playerstate.car_posWorld1.lx;
+    lz = state.playerstate.car_posWorld1.lz;
+
+    // Smoothed per-frame velocity (EMA). Cheap: one subtract + a few ops/frame.
+    if (boot_pos_velinit) {
+        boot_pos_vx = (boot_pos_vx * 3 + (lx - boot_pos_lastlx)) / 4;
+        boot_pos_vz = (boot_pos_vz * 3 + (lz - boot_pos_lastlz)) / 4;
+    }
+    boot_pos_lastlx = lx;
+    boot_pos_lastlz = lz;
+    boot_pos_velinit = 1;
+
+    x = (int)(uint8_t)(((uint32_t)lx) >> 16);
+    y = 29 - (int)(uint8_t)(((uint32_t)lz) >> 16);
     if (x < 0 || x > 29 || y < 0 || y > 29) {
         return; // off the 30x30 grid (e.g. mid-air) — keep the last marker
     }
     if (boot_pos_have && x == boot_pos_x && y == boot_pos_y) {
         return; // square unchanged
     }
-
-    dir = boot_pos_dir;
-    if (boot_pos_have) {
-        dx = x - boot_pos_x;
-        dy = y - boot_pos_y;
-        dir = boot_dir_octant(dx, dy);
-        if (dir < 0) {
-            dir = boot_pos_dir; // cell changed but no step (shouldn't happen)
-        }
-    }
-    if (dir < 0) {
-        dir = boot_start_dir(); // before the first move, face the start heading
-    }
     boot_pos_have = 1;
     boot_pos_x = x;
     boot_pos_y = y;
-    boot_pos_dir = dir;
+
+    // Publish the velocity (scaled) as the direction; while stationary, the
+    // start heading. The host turns this into an exact angle.
+    vx = boot_pos_vx >> 6;
+    vz = boot_pos_vz >> 6;
+    if ((vx < 0 ? -vx : vx) + (vz < 0 ? -vz : vz) < 4) {
+        boot_start_vel(&vx, &vz);
+    }
 
     p = boot_pos_txt;
     n = 0;
@@ -546,12 +537,11 @@ static void boot_publish_pos(void)
     p[n++] = ' ';
     n += boot_udec((unsigned)y, p + n);
     p[n++] = ' ';
-    if (dir < 0) {
-        p[n++] = '-';
-        p[n++] = '1';
-    } else {
-        n += boot_udec((unsigned)dir, p + n);
-    }
+    if (vx < 0) { p[n++] = '-'; vx = -vx; }
+    n += boot_udec((unsigned)vx, p + n);
+    p[n++] = ' ';
+    if (vz < 0) { p[n++] = '-'; vz = -vz; }
+    n += boot_udec((unsigned)vz, p + n);
     p[n++] = '\n';
     file_write_fatal_asm_(boot_pos_name, (void far*)boot_pos_txt, (unsigned long)n);
 }
