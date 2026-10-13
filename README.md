@@ -62,7 +62,7 @@ menus and boot straight into content. They are ignored by the pure-original
 | `/cCAR`   | Select the player car (exactly 4 chars), e.g. `/cJAGU`; corresponds to `CARCAR.RES`.  |
 | `/nNICK`  | Prefill the high-score name field with `NICK` (up to 16 chars).                       |
 | `/info`   | Verification mode: re-simulate the race/replay, then write `TIMING.TXT` (`total=…`, `penalty=…`, `fps=…`, `recorded=…` frame counts) and print it — to check a submission's timing against the game's own recomputation. |
-| `/pos`    | Live position: while a race runs, rewrite `POS.TXT` (`col row wx wy vx vz`, 0-29). `wx`/`wy` are continuous screen coordinates (256 per cell, `wx>>8==col`, `wy>>8==row`) for smooth plotting; `vx`/`vz` are the car's world velocity, so the exact heading is `atan2(-vz, vx)` — before the car moves they carry the start heading. Rewritten whenever the car enters a new map cell. |
+| `/pos`    | Live position: while a race runs, rewrite `POS.TXT` (`col row wx wy vx vz`, 0-29). `wx`/`wy` are continuous screen coordinates (256 per cell, `wx>>8==col`, `wy>>8==row`) for smooth plotting; `vx`/`vz` are the car's world velocity, so the exact heading is `atan2(-vz, vx)` — before the car moves they carry the start heading. Rewritten at most every 6 frames (the first write is immediate). |
 | `FILE`    | Boot into a replay, e.g. `FUN` or `FUN.RPL` (the first bare argument).                |
 
 Arguments can be combined and are case-insensitive (the `/n` nickname's case
@@ -74,6 +74,13 @@ The replay of every finished race is saved automatically, twice: `lastrep.rpl`
 (the standard format) and `lastrep.rp2` (the same bytes plus a 16-byte timing
 trailer carrying the total and penalty times). A `.rp2` renamed to `.rpl` still
 plays in the original game.
+
+### Track menu high scores (port-only)
+
+The in-game track viewer lists the top 3 high scores per track instead of only
+the best time. Rows with no recorded time are left blank, and tracks with no
+times at all skip the table. `restunto.exe` keeps the original single-row
+display.
 
 See [PORTING_NOTES.md](PORTING_NOTES.md) for how these are wired into the port
 and [TIMING.md](TIMING.md) for the timing model and the `.rp2` format.
