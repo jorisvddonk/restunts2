@@ -562,7 +562,9 @@ LAB_1000_0575:
     pop     bp
     retf
 stuntsmain_asm_ endp
+ifdef RESTUNTS_ORIGINAL
     nop
+endif
 
 ; int __cdecl16far run_intro_looped(void)
 run_intro_looped_asm_ proc far
@@ -1787,6 +1789,8 @@ ROWLOOP_3:
     jl      ROWBODY_3
     jmp     near ptr ROWDONE_3
 ROWBODY_3:
+    cmp     byte ptr [bp+var_14], 0x0
+    jnz     SKIP_HDR_3
 else
     mov     ax, 0x34
     imul    word ptr [word_46170]
@@ -1823,6 +1827,9 @@ endif
     push    ax
     call    far ptr intro_draw_text
     add     sp, 0xa
+ifndef RESTUNTS_ORIGINAL
+SKIP_HDR_3:
+endif
     push    word ptr [fontnptr+2]
     push    word ptr [fontnptr]
     call    far ptr font_set_fontdef2
@@ -2074,7 +2081,9 @@ LAB_1000_1470:
     cmp     ax, 0x4d00
     jz      LAB_1000_14a4
     jmp     near ptr LAB_1000_13b4
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_1490:
     cmp     byte ptr [bp+var_16], 0x0
     jz      LAB_1000_149c
@@ -2083,7 +2092,9 @@ LAB_1000_1490:
 LAB_1000_149c:
     mov     byte ptr [bp+var_16], 0x2
     jmp     near ptr LAB_1000_13b4
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_14a4:
     cmp     byte ptr [bp+var_16], 0x2
     jge     LAB_1000_14b0
@@ -2092,7 +2103,9 @@ LAB_1000_14a4:
 LAB_1000_14b0:
     mov     byte ptr [bp+var_16], 0x0
     jmp     near ptr LAB_1000_13b4
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_14b8:
     mov     byte ptr [bp+var_16], 0xff
 LAB_1000_14bc:
@@ -7071,7 +7084,9 @@ LAB_1000_4486:
 LAB_1000_448d:
     mov     byte ptr [bp+var_selectedmenu], 0x3
     jmp     near ptr LAB_1000_4188
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_4496:
     cmp     byte ptr [bp+var_selectedmenu], 0x0
     jz      LAB_1000_448d
@@ -7273,7 +7288,9 @@ LAB_1000_4664:
     mov     al, byte ptr [bp+si+0xfbc2]
     add     al, 0x20
     jmp     LAB_1000_4688
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_4684:
     mov     al, byte ptr [bp+si+0xfbc2]
 LAB_1000_4688:
