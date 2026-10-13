@@ -239,7 +239,9 @@ LAB_1000_0086:
     call    near ptr set_default_car
     mov     si, 0x1
     jmp     near ptr _do_intro
+ifdef RESTUNTS_ORIGINAL
     nop
+endif
 _tracks_menu0:
     sub     ax, ax
 _tracks_menu_ax:
@@ -248,14 +250,18 @@ _tracks_menu_ax:
     call    near ptr run_tracks_menu
     add     sp, 0x2
     jmp     near ptr _show_menu
+ifdef RESTUNTS_ORIGINAL
     nop
+endif
 _do_opp_menu:
     call    far ptr check_input
     call    far ptr show_waiting
     push    cs
     call    near ptr run_opponent_menu
     jmp     near ptr _show_menu
+ifdef RESTUNTS_ORIGINAL
     nop
+endif
 _do_option_menu:
     call    far ptr check_input
     call    far ptr show_waiting
@@ -266,7 +272,9 @@ _do_option_menu:
 _goto_game1:
     mov     byte ptr [bp+var_A], 0x1
     jmp     _do_game1
+ifdef RESTUNTS_ORIGINAL
     nop
+endif
 _do_car_menu:
     call    far ptr check_input
     call    far ptr show_waiting
@@ -282,7 +290,9 @@ _do_car_menu:
     call    near ptr run_car_menu
     add     sp, 0x8
     jmp     near ptr _show_menu
+ifdef RESTUNTS_ORIGINAL
     nop
+endif
 _do_game0:
     mov     byte ptr [bp+var_A], 0x0
 _do_game1:
@@ -359,7 +369,9 @@ _init_replay:
 LAB_1000_03d1:
     mov     byte ptr [byte_43966], 0x0
     jmp     near ptr LAB_1000_04ac
+ifdef RESTUNTS_ORIGINAL
     nop
+endif
 _find_tedit:
     mov     ax, offset aTedit__0
     push    ax
@@ -444,11 +456,15 @@ LAB_1000_0493:
     jmp     near ptr _do_option_menu
 LAB_1000_049b:
     jmp     _show_menu
+ifdef RESTUNTS_ORIGINAL
     nop
+endif
 LAB_1000_049e:
     mov     byte ptr [byte_43966], 0x4
     jmp     LAB_1000_04ac
+ifdef RESTUNTS_ORIGINAL
     nop
+endif
 LAB_1000_04a6:
     mov     word ptr [gameconfig.game_recordedframes], 0x0
 LAB_1000_04ac:
@@ -505,7 +521,9 @@ LAB_1000_04fc:
     jmp     near ptr _show_menu
 LAB_1000_0536:
     jmp     near ptr _do_intro0
+ifdef RESTUNTS_ORIGINAL
     nop
+endif
 _ask_dos:
     sub     ax, ax
     push    ax
@@ -1335,7 +1353,9 @@ LAB_1000_0da0:
     or      ax, ax
     jz      LAB_1000_0d77
     jmp     LAB_1000_0d88
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_0dec:
     call    far ptr sprite_copy_wnd_to_1
     mov     ax, 0xc8
@@ -1627,7 +1647,9 @@ LAB_1000_10ba:
     pop     bp
     retf
 run_menu_asm_ endp
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 
 ; void __cdecl16far run_tracks_menu(int skip_init)
 run_tracks_menu_asm_ proc far
@@ -1753,6 +1775,12 @@ LAB_1000_10ed:
     jmp     near ptr LAB_1000_12e5
 LAB_1000_11f9:
 ifndef RESTUNTS_ORIGINAL
+    mov     ax, 0x34
+    imul    word ptr [word_46170]
+    mov     di, ax
+    les     bx, [td11_highscores]
+    cmp     word ptr es:[bx+di+0x32], -0x1
+    jz      LAB_1000_12e5
     mov     byte ptr [bp+var_14], 0x0
 ROWLOOP_3:
     cmp     byte ptr [bp+var_14], 0x3
@@ -6120,7 +6148,9 @@ LAB_1000_3a4b:
     jnz     LAB_1000_3b2c
     mov     word ptr [bp+var_7A], 0x1
     jmp     LAB_1000_3b31
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_3b2c:
     mov     word ptr [bp+var_7A], 0x3
 LAB_1000_3b31:
@@ -6131,7 +6161,9 @@ LAB_1000_3b36:
     jnz     LAB_1000_3b42
     mov     ax, offset aD4a
     jmp     LAB_1000_3b57
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_3b42:
     mov     al, byte ptr [bp+var_6A]
     mov     byte ptr [bp+var_12], al
@@ -6209,12 +6241,16 @@ LAB_1000_3bf3:
     inc     word ptr [bp+var_40]
     mov     byte ptr [bx+g_res_id], al
     jmp     LAB_1000_3bf0
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_3c10:
     mov     ax, word ptr [bp+var_8A]
     add     word ptr [bp+var_50], ax
     jmp     LAB_1000_3c86
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_3c1a:
     mov     bx, word ptr [bp+var_40]
     mov     byte ptr [bx+g_res_id], 0x0
@@ -6258,7 +6294,9 @@ LAB_1000_3c86:
     mov     word ptr [bp+var_80], 0x1
     mov     byte ptr [bp+var_3C], 0x20
     jmp     LAB_1000_3ca0
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_3c92:
     mov     bx, word ptr [bp+var_80]
     inc     word ptr [bp+var_80]
@@ -6437,7 +6475,9 @@ LAB_1000_3ddf:
     add     sp, 0x8
     call    far ptr sprite_copy_2_to_1_2
     jmp     LAB_1000_3ea0
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_3e8a:
     push    word ptr [bp+var_90]
     push    word ptr [bp+var_8C]
@@ -6565,7 +6605,9 @@ LAB_1000_3f84:
     call    far ptr hiscore_draw_text
     add     sp, 0xa
     jmp     LAB_1000_3fda
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_3fd6:
     push    cs
     call    near ptr highscore_text_unk
@@ -6581,14 +6623,18 @@ LAB_1000_3fda:
 LAB_1000_3ff9:
     mov     word ptr [bp+var_9C], 0xffdc
     jmp     LAB_1000_4058
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_4002:
     mov     word ptr [bp+var_9C], 0x0
     cmp     byte ptr [bp+var_14], 0x0
     jz      LAB_1000_4014
     mov     ax, offset aBev
     jmp     LAB_1000_4017
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_4014:
     mov     ax, offset aBhi
 LAB_1000_4017:
@@ -6855,7 +6901,9 @@ LAB_1000_424d:
     add     sp, 0x8
     call    far ptr sprite_copy_2_to_1_2
     jmp     LAB_1000_430e
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_42f8:
     push    word ptr [bp+var_90]
     push    word ptr [bp+var_8C]
@@ -6967,7 +7015,9 @@ LAB_1000_43c6:
 LAB_1000_4404:
     mov     byte ptr [bp+var_6E], 0x2
     jmp     near ptr LAB_1000_3a1d
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_440c:
     call    far ptr audio_unload
     cmp     byte ptr [bp+var_16], 0x0
@@ -7007,7 +7057,9 @@ LAB_1000_445f:
     mov     sp, bp
     pop     bp
     retf
+ifdef RESTUNTS_ORIGINAL
     db 0x90
+endif
 LAB_1000_447a:
     cmp     byte ptr [bp+var_16], 0x0
     jz      LAB_1000_4486
