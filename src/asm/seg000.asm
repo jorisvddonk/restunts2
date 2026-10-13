@@ -2686,11 +2686,12 @@ LAB_1000_19e7:
 ifndef RESTUNTS_ORIGINAL
     jmp     short TAIL_3
 EMPTY_DASH_3:
-    ; "-:--.--",0 as little-endian word pairs
-    mov     word ptr [bp+var_12], 0x3a2d
-    mov     word ptr [bp+var_12+2], 0x2d2d
-    mov     word ptr [bp+var_12+4], 0x2d3a
-    mov     word ptr [bp+var_12+6], 0x2d
+    mov     byte ptr [bp+var_12], 0x0
+    mov     byte ptr [bp+var_16], 0x0
+    mov     bx, word ptr [bp+param_2]
+    mov     byte ptr [bx+0x1], 0x0
+    mov     byte ptr [bx+0x2], 0x0
+    nop
 TAIL_3:
 endif
     mov     bx, word ptr [bp+param_2]
